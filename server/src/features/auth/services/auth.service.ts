@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../shared/database/connection";
-import { BadRequestException } from "../../../shared/errors/error.core";
+import { BadRequestException, UnAuthorizedException } from "../../../shared/errors/error.core";
 import { users } from "../models";
 import bcrypt from "bcrypt";
-import { UserPayload } from "../schemas/user.schema";
+import { UserPayload, SignInPayload } from "../schemas/user.schema";
 import { assignRoleToUser } from "../utils/assignRole";
 import { jwtproviders } from "../utils/jwt.provider";
 import { getUserAccess } from "../utils/getUserAccess";
@@ -49,6 +49,31 @@ class AuthService {
     const refreshToken = await jwtproviders.generateRefreshToken(payload);
     //return
     return {accessToken, refreshToken, payload}
+  }
+  public async signIn(credentials: SignInPayload) {
+    const { email, password } = credentials;
+    const [existingUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email));
+    if (!existingUser) {
+      throw new UnAuthorizedException("Invalid email or password");
+    }
+    const isPasswordValid = await bcrypt.compare(password, existingUser.password);
+    if (!isPasswordValid) {
+      throw new UnAuthorizedException("Invalid email or password");
+    }
+    const { roles, permissions } = await getUserAccess(existingUser.id);
+    const payload = {
+      userId: existingUser.id,
+      name: existingUser.name,
+      email: existingUser.email,
+      roles,
+      permissions,
+    };
+    const accessToken = await jwtproviders.generateToken(payload);
+    const refreshToken = await jwtproviders.generateRefreshToken(payload);
+    return { accessToken, refreshToken, payload };
   }
 }
 
