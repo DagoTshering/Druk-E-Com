@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as authSchema from '../../features/auth/models/index.js';
+import * as productSchema from '../../features/product/models/index.js';
 
 
 
@@ -16,6 +17,7 @@ const pool = new Pool({ connectionString: DATABASE_URL });
 // Merge all schemas
 const schema = {
     ...authSchema,
+    ...productSchema,
 };
 
 export const db = drizzle(pool, { schema });

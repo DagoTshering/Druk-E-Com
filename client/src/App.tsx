@@ -2,11 +2,14 @@
 // LUXEMARKET - MAIN APP (RESPONSIVE WITH AUTH)
 // ============================================================================
 
-import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
+import { useSelector } from 'react-redux';
 import { RoleProvider, useRole } from './context/RoleContext';
 import { RoleSwitcher } from './components/RoleSwitcher';
+import { store } from './redux/store';
+import { resetUser } from './redux/user/userSlice';
 
 // Customer Pages
 import { Home } from './pages/customer/Home';
@@ -60,6 +63,9 @@ import {
   LogIn
 } from 'lucide-react';
 
+export const navigateRef: { current: ((path: string) => void) | null } = { current: null };
+export const navigateTo = (path: string) => navigateRef.current?.(path);
+
 // ============================================================================
 // AUTH CONTEXT
 // ============================================================================
@@ -93,14 +99,14 @@ export const useAuth = () => {
 
 interface CustomerNavProps {
   cartCount: number;
-  isAuthenticated: boolean;
-  user: AuthUser | null;
   onLogout: () => void;
 }
 
-const CustomerNav: React.FC<CustomerNavProps> = ({ cartCount, isAuthenticated, user, onLogout }) => {
+const CustomerNav: React.FC<CustomerNavProps> = ({ cartCount, onLogout }) => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const user = useSelector((state: any) => state.users.user);
+  const isAuthenticated = useSelector((state: any) => state.users.isAuthenticated);
   
   const navItems = [
     { path: '/', label: 'Home', icon: HomeIcon },
@@ -257,13 +263,13 @@ const CustomerNav: React.FC<CustomerNavProps> = ({ cartCount, isAuthenticated, u
 
 interface SidebarProps {
   role: 'seller' | 'admin' | 'delivery' | 'support';
-  user: AuthUser | null;
   onLogout: () => void;
 }
 
-const DashboardSidebar: React.FC<SidebarProps> = ({ role, user, onLogout }) => {
+const DashboardSidebar: React.FC<SidebarProps> = ({ role, onLogout }) => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const user = useSelector((state: any) => state.users.user);
 
   const getNavItems = () => {
     switch (role) {
@@ -458,6 +464,12 @@ const DashboardSidebar: React.FC<SidebarProps> = ({ role, user, onLogout }) => {
 
 const AppContent: React.FC = () => {
   const { currentRole, setRole } = useRole();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    navigateRef.current = navigate;
+  }, [navigate]);
+
   const [cart, setCart] = useState<{ productId: string; quantity: number }[]>([
     { productId: 'p2', quantity: 1 },
     { productId: 'p7', quantity: 2 }
@@ -476,6 +488,10 @@ const AppContent: React.FC = () => {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('user');
+    localStorage.removeItem('isAuthenticated');
+    store.dispatch(resetUser());
     setIsAuthenticated(false);
     setUser(null);
     setRole('customer');
@@ -508,15 +524,12 @@ const AppContent: React.FC = () => {
         {currentRole === 'customer' && (
           <CustomerNav 
             cartCount={cartItemCount} 
-            isAuthenticated={isAuthenticated}
-            user={user}
             onLogout={handleLogout}
           />
         )}
         {isDashboardRole && (
           <DashboardSidebar 
             role={currentRole} 
-            user={user}
             onLogout={handleLogout}
           />
         )}

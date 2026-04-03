@@ -75,6 +75,28 @@ class AuthService {
     const refreshToken = await jwtproviders.generateRefreshToken(payload);
     return { accessToken, refreshToken, payload };
   }
+
+  public async refreshToken(token: string) {
+    const payload = jwtproviders.verifyRefreshToken(token);
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, payload.userId));
+    if (!user) {
+      throw new UnAuthorizedException("User not found");
+    }
+    const { roles, permissions } = await getUserAccess(user.id);
+    const newPayload = {
+      userId: user.id,
+      name: user.name,
+      email: user.email,
+      roles,
+      permissions,
+    };
+    const accessToken = jwtproviders.generateToken(newPayload);
+    const refreshToken = jwtproviders.generateRefreshToken(newPayload);
+    return { accessToken, refreshToken, payload: newPayload };
+  }
 }
 
 export const authService = new AuthService();

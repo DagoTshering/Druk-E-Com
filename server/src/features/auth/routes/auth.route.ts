@@ -8,5 +8,6 @@ const authRoute = express.Router();
 
 authRoute.post("/sign-up", validator({ body: UserSchema }), asyncWrapper(authController.signUp));
 authRoute.post("/sign-in", validator({ body: SignInSchema }), asyncWrapper(authController.signIn));
+authRoute.post("/refresh-token", asyncWrapper(authController.refreshToken));
 
 export default authRoute;

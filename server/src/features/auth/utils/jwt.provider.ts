@@ -10,7 +10,7 @@ class jwtProviders {
     if (!jwtSecretKey) {
       throw new Error("JWT_SECRET is not defined");
     }
-    return JWT.sign(payload, jwtSecretKey, { expiresIn: '5s' });
+    return JWT.sign(payload, jwtSecretKey, { expiresIn: '10s' });
   }
 
   public verifyToken(token: string): JwtPayload {

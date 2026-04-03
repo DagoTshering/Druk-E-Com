@@ -8,6 +8,10 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Store, Eye, EyeOff, Mail, Lock, Phone, Building2, MapPin, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { signInSchema, signUpSchema, type AuthUser } from '../../schemas/auth.schema';
+import { authApi } from '../../apis/authApi';
+import { store } from '../../redux/store';
+import { setUser } from '../../redux/user/userSlice';
 
 interface AuthProps {
   onLogin: (userType: 'customer' | 'seller', userData: any) => void;
@@ -23,7 +27,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   // Login form state
   const [loginData, setLoginData] = useState({
     email: '',
-    password: ''
+    password: '',
   });
 
   // Customer registration state
@@ -32,7 +36,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     email: '',
     phone: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
   });
 
   // Seller registration state
@@ -51,49 +55,88 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Demo credentials check
-    if (loginData.email && loginData.password) {
-      const demoUser = {
-        id: userType === 'customer' ? 'u1' : 'u3',
-        name: userType === 'customer' ? 'Alexandra Chen' : 'Sophia Williams',
-        email: loginData.email,
-        role: userType,
-        avatar: userType === 'customer' 
-          ? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop'
-          : 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop'
-      };
-
-      onLogin(userType, demoUser);
-      toast.success(`Welcome back, ${demoUser.name}!`);
-      navigate(userType === 'seller' ? '/seller' : '/');
-    } else {
-      toast.error('Please enter valid credentials');
+    const parsed = signInSchema.safeParse(loginData);
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0].message);
+      setIsLoading(false);
+      return;
     }
 
-    setIsLoading(false);
+    try {
+      const response = await authApi.signIn(parsed.data);
+      const userData: AuthUser = response.data;
+
+      store.dispatch(setUser({
+        isAuthenticated: true,
+        accessToken: response.accessToken,
+        user: userData,
+      }));
+
+      onLogin(userType, {
+        id: userData.userId,
+        name: userData.name,
+        email: userData.email,
+        role: userType,
+        avatar: undefined,
+      });
+
+      toast.success(response.message);
+      navigate(userType === 'seller' ? '/seller' : '/');
+    } catch (error: any) {
+      const message = error?.response?.data?.message || 'Sign in failed. Please try again.';
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Validate passwords match
-    const regData = userType === 'customer' ? customerReg : sellerReg;
-    if (regData.password !== regData.confirmPassword) {
+    if (customerReg.password !== customerReg.confirmPassword) {
       toast.error('Passwords do not match');
       setIsLoading(false);
       return;
     }
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    const parsed = signUpSchema.safeParse({
+      name: customerReg.name,
+      email: customerReg.email,
+      password: customerReg.password,
+    });
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0].message);
+      setIsLoading(false);
+      return;
+    }
 
-    toast.success('Account created successfully! Please login.');
-    setActiveTab('login');
-    setIsLoading(false);
+    try {
+      const response = await authApi.signUp(parsed.data);
+      const userData: AuthUser = response.data;
+
+      store.dispatch(setUser({
+        isAuthenticated: true,
+        accessToken: response.accessToken,
+        user: userData,
+      }));
+
+      onLogin(userType, {
+        id: userData.userId,
+        name: userData.name,
+        email: userData.email,
+        role: userType,
+        avatar: undefined,
+      });
+
+      toast.success(response.message || 'Account created successfully!');
+      navigate(userType === 'seller' ? '/seller' : '/');
+    } catch (error: any) {
+      const message = error?.response?.data?.message || 'Sign up failed. Please try again.';
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
