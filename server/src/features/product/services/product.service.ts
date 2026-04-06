@@ -13,6 +13,35 @@ class ProductService {
     return cat?.name || "";
   }
 
+  public async getCategories() {
+    const categoryList = await db
+      .select({
+        id: categories.id,
+        name: categories.name,
+        slug: categories.slug,
+      })
+      .from(categories)
+      .where(eq(categories.isActive, true));
+
+    const categoryCounts = await db
+      .select({
+        categoryId: products.categoryId,
+        count: sql<number>`count(*)`,
+      })
+      .from(products)
+      .where(eq(products.isActive, true))
+      .groupBy(products.categoryId);
+
+    const countMap = new Map(categoryCounts.map(c => [c.categoryId, c.count]));
+
+    return categoryList.map(cat => ({
+      id: cat.id,
+      name: cat.name,
+      slug: cat.slug,
+      productCount: countMap.get(cat.id) || 0,
+    }));
+  }
+
   public async getProducts(query: GetProductsPayload) {
     const page = query.page || 1;
     const limit = query.limit || 20;
@@ -70,11 +99,7 @@ class ProductService {
         isFeatured: products.isFeatured,
         createdAt: products.createdAt,
         updatedAt: products.updatedAt,
-        category: {
-          id: categories.id,
-          name: categories.name,
-          slug: categories.slug,
-        },
+        category: categories.name,
       })
       .from(products)
       .leftJoin(categories, eq(products.categoryId, categories.id))

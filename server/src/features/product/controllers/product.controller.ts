@@ -3,6 +3,11 @@ import { productService } from "../services/product.service";
 import HTTP_STATUS from "../../../shared/constants/http.constant";
 
 class ProductController {
+  public async getCategories(req: Request, res: Response) {
+    const result = await productService.getCategories();
+    return res.status(HTTP_STATUS.OK).json(result);
+  }
+
   public async getProducts(req: Request, res: Response) {
     const result = await productService.getProducts(req.query);
     return res.status(HTTP_STATUS.OK).json(result);

@@ -13,6 +13,11 @@ import { productController } from "../controllers/product.controller.js";
 const productRoute = express.Router();
 
 productRoute.get(
+  "/categories",
+  asyncWrapper(productController.getCategories)
+);
+
+productRoute.get(
   "/",
   validator({ query: getProductsQuerySchema }),
   asyncWrapper(productController.getProducts)
