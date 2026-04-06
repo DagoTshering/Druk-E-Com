@@ -4,9 +4,9 @@ import { BadRequestException, UnAuthorizedException } from "../../../shared/erro
 import { users } from "../models";
 import bcrypt from "bcrypt";
 import { UserPayload, SignInPayload } from "../schemas/user.schema";
-import { assignRoleToUser } from "../utils/assignRole";
-import { jwtproviders } from "../utils/jwt.provider";
-import { getUserAccess } from "../utils/getUserAccess";
+import { assignRoleToUser } from "../../../shared/utils/assignRole";
+import { jwtproviders } from "../../../shared/utils/jwt.provider";
+import { getUserAccess } from "../../../shared/utils/getUserAccess";
 class AuthService {
   public async signUp(user: UserPayload) {
     const { name, email, password } = user;

@@ -3,6 +3,7 @@ import { store } from "../redux/store";
 import { setUser, resetUser } from "../redux/user/userSlice";
 import { toast } from 'sonner';
 import { navigateTo } from "../App";
+export { sellerApi } from "./sellerApi";
 
 export const axiosInstance = axios.create({
   baseURL: "http://localhost:5050/api/v1",

@@ -1,6 +1,6 @@
 import JWT, { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken';
-import { UnAuthorizedException } from '../../../shared/errors/error.core';
-import { JwtPayload } from '../../../shared/types/auth.types.js';
+import { UnAuthorizedException } from '../errors/error.core';
+import { JwtPayload } from '../types/auth.types.js';
 
 const jwtSecretKey = process.env.JWT_SECRET;
 const rtSecretKey = process.env.RT_SECRET;

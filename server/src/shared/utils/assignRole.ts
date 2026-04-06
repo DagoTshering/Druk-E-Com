@@ -1,6 +1,6 @@
 // utils/assignRole.ts
-import { db } from '../../../shared/database/connection';
-import { roles, userRoles } from '../models';
+import { db } from '../database/connection';
+import { roles, userRoles } from '../../features/auth/models';
 import { eq } from 'drizzle-orm';
 
 export async function assignRoleToUser(userId: string, roleSlug: string) {

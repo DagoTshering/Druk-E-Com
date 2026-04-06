@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { authService } from "../services/auth.service";
 import HTTP_STATUS from "../../../shared/constants/http.constant";
 
-const REFRESH_COOKIE_OPTIONS = {
+export const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,
   maxAge: 7 * 24 * 60 * 60 * 1000,
   sameSite: (process.env.NODE_ENV === "development" ? "lax" : "none") as "lax" | "none",

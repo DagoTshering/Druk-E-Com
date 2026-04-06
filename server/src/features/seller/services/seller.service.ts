@@ -5,9 +5,9 @@ import { sellerProfiles } from "../models";
 import bcrypt from "bcrypt";
 import { users } from "../../auth/models";
 import { RegisterSellerPayload, ApplyAsSellerPayload } from "../schemas/seller.schema";
-import { assignRoleToUser } from "../../auth/utils/assignRole";
-import { jwtproviders } from "../../auth/utils/jwt.provider";
-import { getUserAccess } from "../../auth/utils/getUserAccess";
+import { assignRoleToUser } from "../../../shared/utils/assignRole";
+import { jwtproviders } from "../../../shared/utils/jwt.provider";
+import { getUserAccess } from "../../../shared/utils/getUserAccess";
 
 class SellerService {
   public async registerSeller(data: RegisterSellerPayload) {

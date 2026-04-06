@@ -1,14 +1,16 @@
 import { Request, Response } from "express";
 import { sellerService } from "../services/seller.service";
 import HTTP_STATUS from "../../../shared/constants/http.constant";
+import { REFRESH_COOKIE_OPTIONS } from "../../auth/controllers/auth.controller";
 
 class SellerController {
   public async registerSeller(req: Request, res: Response) {
-    const { accessToken, refreshToken, payload } = await sellerService.registerSeller(req.body);
+    const result = await sellerService.registerSeller(req.body);
+    res.cookie("refreshToken", result.refreshToken, REFRESH_COOKIE_OPTIONS);
     return res.status(HTTP_STATUS.CREATED).json({
       message: "Your seller account has been created and is pending approval",
-      accessToken,
-      data: payload,
+      accessToken: result.accessToken,
+      data: result.payload
     });
   }
 

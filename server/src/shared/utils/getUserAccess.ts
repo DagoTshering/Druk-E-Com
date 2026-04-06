@@ -1,11 +1,11 @@
 // utils/getUserAccess.ts
-import { db } from "../../../shared/database/connection";
+import { db } from "../database/connection";
 import {
   userRoles,
   roles,
   rolePermissions,
   permissions,
-} from "../models";
+} from "../../features/auth/models";
 import { eq } from "drizzle-orm";
 
 export async function getUserAccess(userId: string) {

@@ -10,6 +10,7 @@ import { RoleProvider, useRole } from './context/RoleContext';
 import { RoleSwitcher } from './components/RoleSwitcher';
 import { store } from './redux/store';
 import { resetUser } from './redux/user/userSlice';
+import { sellerApi, type SellerProfile } from './apis/sellerApi';
 
 // Customer Pages
 import { Home } from './pages/customer/Home';
@@ -104,10 +105,30 @@ interface CustomerNavProps {
 
 const CustomerNav: React.FC<CustomerNavProps> = ({ cartCount, onLogout }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sellerProfile, setSellerProfile] = useState<SellerProfile | null>(null);
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
   const user = useSelector((state: any) => state.users.user);
   const isAuthenticated = useSelector((state: any) => state.users.isAuthenticated);
-  
+
+  useEffect(() => {
+    if (isAuthenticated && !sellerProfile) {
+      sellerApi.getProfile()
+        .then(res => setSellerProfile(res.data))
+        .catch(() => setSellerProfile(null));
+    }
+  }, [isAuthenticated]);
+
+  const handleSellerDashboardClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (sellerProfile?.status === 'approved') {
+      navigate('/seller');
+    } else {
+      setShowStatusDialog(true);
+    }
+  };
+
   const navItems = [
     { path: '/', label: 'Home', icon: HomeIcon },
     { path: '/cart', label: 'Cart', icon: ShoppingCart, badge: cartCount },
@@ -119,6 +140,42 @@ const CustomerNav: React.FC<CustomerNavProps> = ({ cartCount, onLogout }) => {
 
   return (
     <>
+      {/* Status Dialog */}
+      {showStatusDialog && sellerProfile && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-dark-surface border border-white/10 rounded-2xl p-8 max-w-md w-full mx-4 text-center">
+            {sellerProfile.status === 'pending' ? (
+              <>
+                <div className="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-3xl">⏳</span>
+                </div>
+                <h3 className="text-xl font-display text-warm-white mb-2">Pending Approval</h3>
+                <p className="text-warm-gray font-body mb-6">
+                  We are reviewing your application.<br />
+                  You will be notified once approved.
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-3xl">❌</span>
+                </div>
+                <h3 className="text-xl font-display text-warm-white mb-2">Application Rejected</h3>
+                <p className="text-warm-gray font-body mb-6">
+                  {sellerProfile.rejectionReason || 'Your seller application was rejected.'}
+                </p>
+              </>
+            )}
+            <button
+              onClick={() => setShowStatusDialog(false)}
+              className="px-6 py-3 bg-gold text-dark-base rounded-xl font-body font-medium hover:bg-gold-light transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
       <nav className="fixed top-0 left-0 right-0 z-40 bg-dark-base/95 backdrop-blur-lg border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-16">
@@ -148,6 +205,24 @@ const CustomerNav: React.FC<CustomerNavProps> = ({ cartCount, onLogout }) => {
                   )}
                 </Link>
               ))}
+
+              {/* Seller Dashboard Tab */}
+              {sellerProfile && (
+                <button
+                  onClick={handleSellerDashboardClick}
+                  className={`relative px-4 py-2 rounded-lg font-body text-sm transition-colors flex items-center gap-2 ${
+                    location.pathname === '/seller'
+                      ? 'bg-gold/10 text-gold'
+                      : 'text-warm-gray hover:text-warm-white hover:bg-white/5'
+                  }`}
+                >
+                  <Store className="w-4 h-4" />
+                  <span>Seller Dashboard</span>
+                  {sellerProfile.status === 'pending' && (
+                    <span className="w-2 h-2 bg-yellow-500 rounded-full" title="Pending Approval" />
+                  )}
+                </button>
+              )}
               
               {/* Auth Buttons */}
               {!isAuthenticated ? (
@@ -213,6 +288,27 @@ const CustomerNav: React.FC<CustomerNavProps> = ({ cartCount, onLogout }) => {
                   )}
                 </Link>
               ))}
+
+              {/* Seller Dashboard Tab - Mobile */}
+              {sellerProfile && (
+                <button
+                  onClick={() => {
+                    handleSellerDashboardClick({ preventDefault: () => {} } as React.MouseEvent);
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-body text-sm transition-colors ${
+                    location.pathname === '/seller'
+                      ? 'bg-gold/10 text-gold'
+                      : 'text-warm-gray hover:text-warm-white hover:bg-white/5'
+                  }`}
+                >
+                  <Store className="w-5 h-5" />
+                  <span>Seller Dashboard</span>
+                  {sellerProfile.status === 'pending' && (
+                    <span className="ml-auto w-2 h-2 bg-yellow-500 rounded-full" />
+                  )}
+                </button>
+              )}
               
               {/* Mobile Auth */}
               {!isAuthenticated ? (
