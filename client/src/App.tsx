@@ -123,6 +123,8 @@ const CustomerNav: React.FC<CustomerNavProps> = ({ cartCount, onLogout }) => {
           }
         })
         .catch(() => setSellerProfile(null));
+    } else if (!isAuthenticated) {
+      setSellerProfile(null);
     }
   }, [isAuthenticated]);
 
