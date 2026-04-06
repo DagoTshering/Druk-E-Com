@@ -149,8 +149,24 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
 
       try {
         const response = await authApi.registerSeller(parsed.data);
+        const userData: AuthUser = response.data;
+
+        store.dispatch(setUser({
+          isAuthenticated: true,
+          accessToken: response.accessToken,
+          user: userData,
+        }));
+
+        onLogin('customer', {
+          id: userData.userId,
+          name: userData.name,
+          email: userData.email,
+          role: 'customer',
+          avatar: undefined,
+        });
+
         toast.success(response.message || 'Seller account created! Awaiting approval.');
-        setActiveTab('login');
+        navigate('/');
       } catch (error: any) {
         const message = error?.response?.data?.message || 'Registration failed. Please try again.';
         toast.error(message);

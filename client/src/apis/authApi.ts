@@ -14,6 +14,14 @@ interface RefreshTokenResponse {
 
 interface RegisterSellerResponse {
   message: string;
+  accessToken: string;
+  data: {
+    userId: string;
+    name: string;
+    email: string;
+    roles: string[];
+    permissions: string[];
+  };
 }
 
 export const authApi = {
@@ -24,7 +32,7 @@ export const authApi = {
     return axiosInstance.post<SignUpPayload, AuthResponse>("/auth/sign-up", data);
   },
   registerSeller(data: RegisterSellerPayload) {
-    return axiosInstance.post<RegisterSellerPayload, RegisterSellerResponse>("/auth/register-seller", data);
+    return axiosInstance.post<RegisterSellerPayload, RegisterSellerResponse>("/seller/register-seller", data);
   },
   refreshToken() {
     return axiosInstance.post<never, RefreshTokenResponse>("/auth/refresh-token");
