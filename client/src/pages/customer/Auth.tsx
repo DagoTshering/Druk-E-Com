@@ -73,16 +73,25 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         user: userData,
       }));
 
-      onLogin(userType, {
+      const primaryRole = userData.roles[0];
+
+      onLogin(primaryRole as any, {
         id: userData.userId,
         name: userData.name,
         email: userData.email,
-        role: userType,
+        role: primaryRole,
         avatar: undefined,
       });
 
       toast.success(response.message);
-      navigate(userType === 'seller' ? '/seller' : '/');
+
+      if (primaryRole === 'admin') {
+        navigate('/admin');
+      } else if (primaryRole === 'seller') {
+        navigate('/seller');
+      } else {
+        navigate('/');
+      }
     } catch (error: any) {
       const message = error?.response?.data?.message || 'Sign in failed. Please try again.';
       toast.error(message);
