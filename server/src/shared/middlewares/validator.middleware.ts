@@ -15,7 +15,7 @@ export const validator = (schemas: SchemaMap) => {
 
       if (schemas.query) {
         const validated = await schemas.query.parseAsync(req.query);
-        req.query = validated as Request["query"];
+        Object.assign(req.query, validated);
       }
 
       if (schemas.params) {
