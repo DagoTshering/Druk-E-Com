@@ -6,8 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { useSelector } from 'react-redux';
-import { RoleProvider, useRole } from './context/RoleContext';
-import { RoleSwitcher } from './components/RoleSwitcher';
+
 import { store } from './redux/store';
 import { resetUser } from './redux/user/userSlice';
 import { sellerApi, type SellerProfile } from './apis/sellerApi';
@@ -567,8 +566,10 @@ const DashboardSidebar: React.FC<SidebarProps> = ({ role, onLogout }) => {
 // ============================================================================
 
 const AppContent: React.FC = () => {
-  const { currentRole, setRole } = useRole();
   const navigate = useNavigate();
+  const user = useSelector((state: any) => state.users.user);
+  const isAuthenticated = useSelector((state: any) => state.users.isAuthenticated);
+  const userRole = user?.roles?.[0] || 'customer';
 
   useEffect(() => {
     navigateRef.current = navigate;
@@ -578,17 +579,12 @@ const AppContent: React.FC = () => {
     { productId: 'p2', quantity: 1 },
     { productId: 'p7', quantity: 2 }
   ]);
-  
-  // Auth State
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<AuthUser | null>(null);
 
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  const handleLogin = (userType: 'customer' | 'seller', userData: AuthUser) => {
-    setIsAuthenticated(true);
-    setUser(userData);
-    setRole(userType);
+  const handleLogin = (_userType: 'customer' | 'seller', _userData: AuthUser) => {
+    // Login is handled in Auth.tsx which dispatches directly to Redux
+    // This callback is kept for interface compatibility
   };
 
   const handleLogout = () => {
@@ -596,19 +592,10 @@ const AppContent: React.FC = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('isAuthenticated');
     store.dispatch(resetUser());
-    setIsAuthenticated(false);
-    setUser(null);
-    setRole('customer');
   };
 
-  // Current user ID (simulated - would come from auth in real app)
-  const currentUserId = user?.id || (currentRole === 'customer' ? 'u1' : 
-                        currentRole === 'seller' ? 'u3' :
-                        currentRole === 'admin' ? 'u5' :
-                        currentRole === 'delivery' ? 'u6' :
-                        currentRole === 'support' ? 'u7' : 'u1');
-
-  const isDashboardRole = currentRole === 'seller' || currentRole === 'admin' || currentRole === 'delivery' || currentRole === 'support';
+  const currentUserId = user?.id || '';
+  const isDashboardRole = ['seller', 'admin', 'delivery', 'support'].includes(userRole);
 
   return (
     <AuthContext.Provider value={{ isAuthenticated, user, login: handleLogin, logout: handleLogout }}>
@@ -625,15 +612,15 @@ const AppContent: React.FC = () => {
         />
 
         {/* Role-based Navigation */}
-        {currentRole === 'customer' && (
-          <CustomerNav 
-            cartCount={cartItemCount} 
+        {userRole === 'customer' && (
+          <CustomerNav
+            cartCount={cartItemCount}
             onLogout={handleLogout}
           />
         )}
         {isDashboardRole && (
-          <DashboardSidebar 
-            role={currentRole} 
+          <DashboardSidebar
+            role={userRole}
             onLogout={handleLogout}
           />
         )}
@@ -641,11 +628,11 @@ const AppContent: React.FC = () => {
         {/* Main Content - Responsive padding */}
         <main className={`
           min-h-screen
-          ${currentRole === 'customer' ? 'pt-16' : 'lg:pl-64 pt-16 lg:pt-0'}
+          ${userRole === 'customer' ? 'pt-16' : 'lg:pl-64 pt-16 lg:pt-0'}
         `}>
           <Routes>
             {/* Customer Routes */}
-            {currentRole === 'customer' && (
+            {userRole === 'customer' && (
               <>
                 <Route path="/" element={<Home cart={cart} setCart={setCart} />} />
                 <Route path="/product/:id" element={<ProductDetail _cart={cart} setCart={setCart} />} />
@@ -664,7 +651,7 @@ const AppContent: React.FC = () => {
             )}
 
             {/* Seller Routes */}
-            {currentRole === 'seller' && (
+            {userRole === 'seller' && (
               <>
                 <Route path="/seller" element={<SellerDashboard currentUserId={currentUserId} />} />
                 <Route path="/seller/listings" element={<MyListings currentUserId={currentUserId} />} />
@@ -675,7 +662,7 @@ const AppContent: React.FC = () => {
             )}
 
             {/* Admin Routes */}
-            {currentRole === 'admin' && (
+            {userRole === 'admin' && (
               <>
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/admin/users" element={<AdminUsers />} />
@@ -688,7 +675,7 @@ const AppContent: React.FC = () => {
             )}
 
             {/* Delivery Routes */}
-            {currentRole === 'delivery' && (
+            {userRole === 'delivery' && (
               <>
                 <Route path="/delivery" element={<DeliveryQueue currentUserId={currentUserId} />} />
                 <Route path="*" element={<Navigate to="/delivery" />} />
@@ -696,7 +683,7 @@ const AppContent: React.FC = () => {
             )}
 
             {/* Support Routes */}
-            {currentRole === 'support' && (
+            {userRole === 'support' && (
               <>
                 <Route path="/support" element={<SupportTickets _currentUserId={currentUserId} />} />
                 <Route path="/support/lookup" element={<OrderLookup />} />
@@ -706,8 +693,6 @@ const AppContent: React.FC = () => {
           </Routes>
         </main>
 
-        {/* Role Switcher - Only show for demo purposes */}
-        <RoleSwitcher />
       </div>
     </AuthContext.Provider>
   );
@@ -720,9 +705,7 @@ const AppContent: React.FC = () => {
 function App() {
   return (
     <BrowserRouter>
-      <RoleProvider>
-        <AppContent />
-      </RoleProvider>
+      <AppContent />
     </BrowserRouter>
   );
 }
