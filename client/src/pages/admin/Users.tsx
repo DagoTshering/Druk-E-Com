@@ -84,7 +84,7 @@ export const AdminUsers: React.FC = () => {
     try {
       await adminApi.approveSeller(userId);
       toast.success('Seller approved successfully');
-      await fetchPendingSellers();
+      await Promise.all([fetchUsers(), fetchPendingSellers()]);
     } catch (error) {
       toast.error('Failed to approve seller');
     }
