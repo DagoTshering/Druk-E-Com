@@ -24,10 +24,13 @@ class AdminService {
       .from(userRoles)
       .leftJoin(roles, eq(userRoles.roleId, roles.id));
 
-    const roleMap = new Map<string, string>();
+    const roleMap = new Map<string, string[]>();
     userRoleList.forEach(ur => {
       if (ur.userId && ur.roleName) {
-        roleMap.set(ur.userId, ur.roleName);
+        if (!roleMap.has(ur.userId)) {
+          roleMap.set(ur.userId, []);
+        }
+        roleMap.get(ur.userId)!.push(ur.roleName);
       }
     });
 
@@ -36,7 +39,7 @@ class AdminService {
       name: user.name,
       email: user.email,
       isActive: user.isActive,
-      role: roleMap.get(user.id) || "customer",
+      roles: roleMap.get(user.id) || ["customer"],
       createdAt: user.createdAt,
     }));
   }

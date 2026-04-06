@@ -69,7 +69,7 @@ export const AdminUsers: React.FC = () => {
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+    const matchesRole = roleFilter === 'all' || user.roles.includes(roleFilter);
     return matchesSearch && matchesRole;
   });
 
@@ -314,9 +314,16 @@ export const AdminUsers: React.FC = () => {
                           </div>
                         </td>
                         <td className="py-4 px-6">
-                          <span className={`px-3 py-1 rounded-full text-xs font-body capitalize ${getRoleBadge(user.role)}`}>
-                            {user.role}
-                          </span>
+                          <div className="flex flex-wrap gap-1">
+                            {user.roles.map(role => (
+                              <span
+                                key={role}
+                                className={`px-3 py-1 rounded-full text-xs font-body capitalize ${getRoleBadge(role)}`}
+                              >
+                                {role}
+                              </span>
+                            ))}
+                          </div>
                         </td>
                         <td className="py-4 px-6">
                           <span className="text-warm-gray font-body">
