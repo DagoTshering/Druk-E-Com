@@ -47,9 +47,22 @@ class SellerService {
       })
       .returning();
 
-    return {
-      message: "Your seller account has been created and is pending approval",
+    await assignRoleToUser(newUser.id, "customer");
+
+    const { roles, permissions } = await getUserAccess(newUser.id);
+
+    const payload = {
+      userId: newUser.id,
+      name: newUser.name,
+      email: newUser.email,
+      roles,
+      permissions,
     };
+
+    const accessToken = await jwtproviders.generateToken(payload);
+    const refreshToken = await jwtproviders.generateRefreshToken(payload);
+
+    return { accessToken, refreshToken, payload };
   }
 
   public async applyAsSeller(userId: string, data: ApplyAsSellerPayload) {

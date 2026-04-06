@@ -4,8 +4,12 @@ import HTTP_STATUS from "../../../shared/constants/http.constant";
 
 class SellerController {
   public async registerSeller(req: Request, res: Response) {
-    const result = await sellerService.registerSeller(req.body);
-    return res.status(HTTP_STATUS.CREATED).json(result);
+    const { accessToken, refreshToken, payload } = await sellerService.registerSeller(req.body);
+    return res.status(HTTP_STATUS.CREATED).json({
+      message: "Your seller account has been created and is pending approval",
+      accessToken,
+      data: payload,
+    });
   }
 
   public async applyAsSeller(req: Request, res: Response) {
