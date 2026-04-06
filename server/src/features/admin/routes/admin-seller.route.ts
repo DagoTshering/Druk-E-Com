@@ -5,8 +5,16 @@ import { validator } from "../../../shared/middlewares/validator.middleware.js";
 import { rejectSellerSchema } from "../../seller/schemas/seller.schema.js";
 import asyncWrapper from "../../../shared/utils/asyncWrapper.js";
 import { sellerController } from "../../seller/controllers/seller.controller.js";
+import { adminController } from "../controllers/admin.controller.js";
 
 const adminSellerRoute = express.Router();
+
+adminSellerRoute.get(
+  "/users",
+  authenticate,
+  authorizeRoles("admin"),
+  asyncWrapper(adminController.getUsers)
+);
 
 adminSellerRoute.get(
   "/sellers/pending",
