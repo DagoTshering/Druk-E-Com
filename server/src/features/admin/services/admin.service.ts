@@ -19,7 +19,7 @@ class AdminService {
     const userRoleList = await db
       .select({
         userId: userRoles.userId,
-        roleName: roles.name,
+        roleName: roles.slug,
       })
       .from(userRoles)
       .leftJoin(roles, eq(userRoles.roleId, roles.id));
