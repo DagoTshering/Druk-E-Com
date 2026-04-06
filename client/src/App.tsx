@@ -115,10 +115,16 @@ const CustomerNav: React.FC<CustomerNavProps> = ({ cartCount, onLogout }) => {
   useEffect(() => {
     if (isAuthenticated && !sellerProfile) {
       sellerApi.getProfile()
-        .then((res: any) => setSellerProfile(res))
+        .then((res: any) => {
+          if (res && typeof res === 'object' && 'id' in res) {
+            setSellerProfile(res);
+          } else {
+            setSellerProfile(null);
+          }
+        })
         .catch(() => setSellerProfile(null));
     }
-  }, [isAuthenticated, sellerProfile]);
+  }, [isAuthenticated]);
 
   const handleSellerDashboardClick = (e: React.MouseEvent) => {
     e.preventDefault();
