@@ -1,5 +1,5 @@
 import { axiosInstance } from ".";
-import type { SignInPayload, SignUpPayload, AuthResponse } from "../schemas/auth.schema";
+import type { SignInPayload, SignUpPayload, AuthResponse, RegisterSellerPayload } from "../schemas/auth.schema";
 
 interface RefreshTokenResponse {
   accessToken: string;
@@ -12,12 +12,19 @@ interface RefreshTokenResponse {
   };
 }
 
+interface RegisterSellerResponse {
+  message: string;
+}
+
 export const authApi = {
   signIn(data: SignInPayload) {
     return axiosInstance.post<SignInPayload, AuthResponse>("/auth/sign-in", data);
   },
   signUp(data: SignUpPayload) {
     return axiosInstance.post<SignUpPayload, AuthResponse>("/auth/sign-up", data);
+  },
+  registerSeller(data: RegisterSellerPayload) {
+    return axiosInstance.post<RegisterSellerPayload, RegisterSellerResponse>("/auth/register-seller", data);
   },
   refreshToken() {
     return axiosInstance.post<never, RefreshTokenResponse>("/auth/refresh-token");

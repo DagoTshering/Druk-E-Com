@@ -1,6 +1,7 @@
 import express from "express";
 import { validator } from "../../../shared/middlewares/validator.middleware.js";
 import { authenticate } from "../../../shared/middlewares/auth.middleware.js";
+import { authorizeRoles } from "../../../shared/middlewares/role.middleware.js";
 import {
   createProductSchema,
   updateProductSchema,
@@ -25,6 +26,7 @@ productRoute.get(
 productRoute.post(
   "/",
   authenticate,
+  authorizeRoles("seller", "admin"),
   validator({ body: createProductSchema }),
   asyncWrapper(productController.createProduct)
 );
@@ -32,6 +34,7 @@ productRoute.post(
 productRoute.put(
   "/:id",
   authenticate,
+  authorizeRoles("seller", "admin"),
   validator({ body: updateProductSchema }),
   asyncWrapper(productController.updateProduct)
 );
@@ -39,6 +42,7 @@ productRoute.put(
 productRoute.delete(
   "/:id",
   authenticate,
+  authorizeRoles("seller", "admin"),
   asyncWrapper(productController.deleteProduct)
 );
 

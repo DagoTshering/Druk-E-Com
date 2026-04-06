@@ -3,8 +3,7 @@ import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as authSchema from '../../features/auth/models/index.js';
 import * as productSchema from '../../features/product/models/index.js';
-
-
+import * as sellerSchema from '../../features/seller/models/index.js';
 
 const DATABASE_URL= process.env.DATABASE_URL
 
@@ -18,6 +17,7 @@ const pool = new Pool({ connectionString: DATABASE_URL });
 const schema = {
     ...authSchema,
     ...productSchema,
+    ...sellerSchema,
 };
 
 export const db = drizzle(pool, { schema });

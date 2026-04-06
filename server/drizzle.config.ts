@@ -8,6 +8,8 @@ export default defineConfig({
     // Paths to all your schema files
     schema: [
         'src/features/auth/models/*.ts',
+        'src/features/product/models/*.ts',
+        'src/features/seller/models/*.ts',
     ],
 
     // Database dialect (PostgreSQL)

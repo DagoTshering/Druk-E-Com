@@ -8,7 +8,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Store, Eye, EyeOff, Mail, Lock, Phone, Building2, MapPin, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { signInSchema, signUpSchema, type AuthUser } from '../../schemas/auth.schema';
+import { signInSchema, signUpSchema, registerSellerSchema, type AuthUser } from '../../schemas/auth.schema';
 import { authApi } from '../../apis/authApi';
 import { store } from '../../redux/store';
 import { setUser } from '../../redux/user/userSlice';
@@ -41,13 +41,14 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
 
   // Seller registration state
   const [sellerReg, setSellerReg] = useState({
+    name: '',
     businessName: '',
     email: '',
     phone: '',
     password: '',
     confirmPassword: '',
-    businessAddress: '',
-    gstNumber: '',
+    taxId: '',
+    address: '',
     businessType: 'individual'
   });
 
@@ -94,48 +95,68 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     e.preventDefault();
     setIsLoading(true);
 
-    if (customerReg.password !== customerReg.confirmPassword) {
-      toast.error('Passwords do not match');
-      setIsLoading(false);
-      return;
-    }
+    if (userType === 'customer') {
+      if (customerReg.password !== customerReg.confirmPassword) {
+        toast.error('Passwords do not match');
+        setIsLoading(false);
+        return;
+      }
 
-    const parsed = signUpSchema.safeParse({
-      name: customerReg.name,
-      email: customerReg.email,
-      password: customerReg.password,
-    });
-    if (!parsed.success) {
-      toast.error(parsed.error.issues[0].message);
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const response = await authApi.signUp(parsed.data);
-      const userData: AuthUser = response.data;
-
-      store.dispatch(setUser({
-        isAuthenticated: true,
-        accessToken: response.accessToken,
-        user: userData,
-      }));
-
-      onLogin(userType, {
-        id: userData.userId,
-        name: userData.name,
-        email: userData.email,
-        role: userType,
-        avatar: undefined,
+      const parsed = signUpSchema.safeParse({
+        name: customerReg.name,
+        email: customerReg.email,
+        password: customerReg.password,
       });
+      if (!parsed.success) {
+        toast.error(parsed.error.issues[0].message);
+        setIsLoading(false);
+        return;
+      }
 
-      toast.success(response.message || 'Account created successfully!');
-      navigate(userType === 'seller' ? '/seller' : '/');
-    } catch (error: any) {
-      const message = error?.response?.data?.message || 'Sign up failed. Please try again.';
-      toast.error(message);
-    } finally {
-      setIsLoading(false);
+      try {
+        const response = await authApi.signUp(parsed.data);
+        const userData: AuthUser = response.data;
+
+        store.dispatch(setUser({
+          isAuthenticated: true,
+          accessToken: response.accessToken,
+          user: userData,
+        }));
+
+        onLogin('customer', {
+          id: userData.userId,
+          name: userData.name,
+          email: userData.email,
+          role: 'customer',
+          avatar: undefined,
+        });
+
+        toast.success(response.message || 'Account created successfully!');
+        navigate('/');
+      } catch (error: any) {
+        const message = error?.response?.data?.message || 'Sign up failed. Please try again.';
+        toast.error(message);
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      const parsed = registerSellerSchema.safeParse(sellerReg);
+      if (!parsed.success) {
+        toast.error(parsed.error.issues[0].message);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const response = await authApi.registerSeller(parsed.data);
+        toast.success(response.message || 'Seller account created! Awaiting approval.');
+        setActiveTab('login');
+      } catch (error: any) {
+        const message = error?.response?.data?.message || 'Registration failed. Please try again.';
+        toast.error(message);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -228,34 +249,6 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
               </button>
             </div>
 
-            {/* User Type Selector (only for login) */}
-            {activeTab === 'login' && (
-              <div className="flex gap-2 mb-6">
-                <button
-                  onClick={() => setUserType('customer')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-body transition-all ${
-                    userType === 'customer'
-                      ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                      : 'bg-dark-base text-warm-gray border border-white/10 hover:border-white/20'
-                  }`}
-                >
-                  <User className="w-4 h-4" />
-                  Customer
-                </button>
-                <button
-                  onClick={() => setUserType('seller')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-body transition-all ${
-                    userType === 'seller'
-                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                      : 'bg-dark-base text-warm-gray border border-white/10 hover:border-white/20'
-                  }`}
-                >
-                  <Store className="w-4 h-4" />
-                  Seller
-                </button>
-              </div>
-            )}
-
             {/* Login Form */}
             {activeTab === 'login' && (
               <form onSubmit={handleLogin} className="space-y-4">
@@ -315,7 +308,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                   disabled={isLoading}
                   className="w-full py-4 bg-gold text-dark-base rounded-xl font-body font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? 'Signing in...' : `Sign in as ${userType === 'customer' ? 'Customer' : 'Seller'}`}
+                  {isLoading ? 'Signing in...' : 'Sign in'}
                 </button>
 
                 <p className="text-center text-warm-gray text-sm font-body">
@@ -450,6 +443,21 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                     // Seller Registration Fields
                     <>
                       <div>
+                        <label className="block text-warm-gray text-sm font-body mb-2">Full Name</label>
+                        <div className="relative">
+                          <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-warm-gray" />
+                          <input
+                            type="text"
+                            value={sellerReg.name}
+                            onChange={(e) => setSellerReg({ ...sellerReg, name: e.target.value })}
+                            placeholder="Enter your full name"
+                            className="w-full pl-12 pr-4 py-3.5 bg-dark-base border border-white/10 rounded-xl text-warm-white placeholder:text-warm-gray/50 focus:border-gold focus:ring-1 focus:ring-gold transition-all font-body"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div>
                         <label className="block text-warm-gray text-sm font-body mb-2">Business Name</label>
                         <div className="relative">
                           <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-warm-gray" />
@@ -468,7 +476,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                         <label className="block text-warm-gray text-sm font-body mb-2">Business Type</label>
                         <select
                           value={sellerReg.businessType}
-                          onChange={(e) => setSellerReg({ ...sellerReg, businessType: e.target.value })}
+                          onChange={(e) => setSellerReg({ ...sellerReg, businessType: e.target.value as any })}
                           className="w-full px-4 py-3.5 bg-dark-base border border-white/10 rounded-xl text-warm-white focus:border-gold focus:ring-1 focus:ring-gold transition-all font-body appearance-none"
                         >
                           <option value="individual">Individual / Proprietor</option>
@@ -509,29 +517,28 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                       </div>
 
                       <div>
-                        <label className="block text-warm-gray text-sm font-body mb-2">Business Address</label>
+                        <label className="block text-warm-gray text-sm font-body mb-2">Tax ID / GST Number (Optional)</label>
                         <div className="relative">
-                          <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-warm-gray" />
+                          <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-warm-gray" />
                           <input
                             type="text"
-                            value={sellerReg.businessAddress}
-                            onChange={(e) => setSellerReg({ ...sellerReg, businessAddress: e.target.value })}
-                            placeholder="Enter business address"
+                            value={sellerReg.taxId}
+                            onChange={(e) => setSellerReg({ ...sellerReg, taxId: e.target.value })}
+                            placeholder="Enter tax ID or GST number"
                             className="w-full pl-12 pr-4 py-3.5 bg-dark-base border border-white/10 rounded-xl text-warm-white placeholder:text-warm-gray/50 focus:border-gold focus:ring-1 focus:ring-gold transition-all font-body"
-                            required
                           />
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-warm-gray text-sm font-body mb-2">GST Number (Optional)</label>
+                        <label className="block text-warm-gray text-sm font-body mb-2">Business Address</label>
                         <div className="relative">
-                          <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-warm-gray" />
+                          <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-warm-gray" />
                           <input
                             type="text"
-                            value={sellerReg.gstNumber}
-                            onChange={(e) => setSellerReg({ ...sellerReg, gstNumber: e.target.value })}
-                            placeholder="Enter GST number"
+                            value={sellerReg.address}
+                            onChange={(e) => setSellerReg({ ...sellerReg, address: e.target.value })}
+                            placeholder="Enter business address"
                             className="w-full pl-12 pr-4 py-3.5 bg-dark-base border border-white/10 rounded-xl text-warm-white placeholder:text-warm-gray/50 focus:border-gold focus:ring-1 focus:ring-gold transition-all font-body"
                           />
                         </div>
