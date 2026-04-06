@@ -24,7 +24,7 @@ import {
   AlertDialogTitle,
 } from '../../components/ui/alert-dialog';
 
-type RoleFilter = 'all' | 'customer' | 'seller' | 'admin' | 'delivery' | 'support' | 'pending_seller';
+type RoleFilter = 'all' | 'seller' | 'admin' | 'delivery' | 'support' | 'pending_seller';
 
 export const AdminUsers: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -163,7 +163,6 @@ export const AdminUsers: React.FC = () => {
               className="px-4 py-3 bg-dark-surface border border-white/10 rounded-xl text-warm-white font-body focus:border-gold focus:ring-1 focus:ring-gold transition-all"
             >
               <option value="all">All Roles</option>
-              <option value="customer">Customer</option>
               <option value="seller">Seller</option>
               <option value="admin">Admin</option>
               <option value="delivery">Delivery</option>
