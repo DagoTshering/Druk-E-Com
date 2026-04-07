@@ -50,4 +50,28 @@ export const productsApi = {
   getCategories() {
     return axiosInstance.get<Category[]>("/products/categories");
   },
+  uploadImages(images: File[]) {
+    const formData = new FormData();
+    images.forEach((image) => {
+      formData.append("images", image);
+    });
+    return axiosInstance.post<{ message: string; imageUrls: string[] }>("/products/upload-images", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
+  createProduct(productData: {
+    name: string;
+    description: string;
+    price: string;
+    originalPrice?: string;
+    categoryId: string;
+    images: string[];
+    stock: number;
+    tags: string[];
+    isFeatured: boolean;
+  }) {
+    return axiosInstance.post("/products", productData);
+  },
 };

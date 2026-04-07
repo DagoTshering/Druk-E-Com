@@ -9,6 +9,7 @@ import {
 } from "../schemas/product.schema.js";
 import asyncWrapper from "../../../shared/utils/asyncWrapper.js";
 import { productController } from "../controllers/product.controller.js";
+import { authorizePermissions } from "../../../shared/middlewares/permission.middleware.js";
 
 const productRoute = express.Router();
 
@@ -25,6 +26,8 @@ productRoute.get(
 
 productRoute.get(
   "/:id",
+  authenticate,
+  authorizeRoles("seller", "admin"),
   asyncWrapper(productController.getProductById)
 );
 

@@ -2,17 +2,19 @@
 // SELLER - ADD/EDIT PRODUCT PAGE
 // ============================================================================
 
-import React, { useState, useRef } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Upload, X, Plus } from 'lucide-react';
-import { categories } from '../../dataStore';
 import { toast } from 'sonner';
+import { productsApi, type Category } from '../../apis/productsApi';
 
 export const ProductForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const isEdit = !!id;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [categories, setCategories] = useState<Category[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -25,23 +27,73 @@ export const ProductForm: React.FC = () => {
   });
   const [newTag, setNewTag] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const fetchCategories = useCallback(async () => {
+    try {
+      const data: any = await productsApi.getCategories();
+      setCategories(data);
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files) return;
+    if (!files || files.length === 0) return;
 
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setFormData(prev => ({
-            ...prev,
-            images: [...prev.images, event.target!.result as string]
-          }));
+    const newFiles = Array.from(files);
+    const maxImages = 5 - formData.images.length;
+    if (newFiles.length > maxImages) {
+      toast.error(`You can only upload ${maxImages} more images`);
+      return;
+    }
+
+    // Preview images locally while uploading
+    const previewUrls = newFiles.map(file => URL.createObjectURL(file));
+    setFormData(prev => ({
+      ...prev,
+      images: [...prev.images, ...previewUrls]
+    }));
+
+    // Upload to Cloudinary
+    setIsUploading(true);
+    try {
+      const response = await productsApi.uploadImages(newFiles);
+      const { imageUrls } = response;
+
+      // Replace preview URLs with actual Cloudinary URLs
+      setFormData(prev => {
+        const updatedImages = [...prev.images];
+        let previewIndex = 0;
+        for (let i = 0; i < updatedImages.length; i++) {
+          if (previewUrls.includes(updatedImages[i]) && imageUrls[previewIndex]) {
+            updatedImages[i] = imageUrls[previewIndex];
+            previewIndex++;
+          }
         }
-      };
-      reader.readAsDataURL(file);
-    });
+        return { ...prev, images: updatedImages };
+      });
+
+      toast.success(`${imageUrls.length} image(s) uploaded successfully`);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to upload images');
+      // Remove preview URLs on error
+      previewUrls.forEach(url => URL.revokeObjectURL(url));
+      setFormData(prev => ({
+        ...prev,
+        images: prev.images.filter(url => !previewUrls.includes(url))
+      }));
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const removeImage = (index: number) => {
@@ -70,14 +122,43 @@ export const ProductForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (formData.images.length === 0) {
+      toast.error('Please upload at least one product image');
+      return;
+    }
+
+    if (isUploading) {
+      toast.error('Please wait for images to finish uploading');
+      return;
+    }
+
     setIsSubmitting(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    toast.success(isEdit ? 'Product updated successfully' : 'Product created successfully');
-    setIsSubmitting(false);
+
+    try {
+      const productData = {
+        name: formData.name,
+        description: formData.description,
+        price: formData.price,
+        originalPrice: formData.originalPrice || undefined,
+        categoryId: formData.category,
+        images: formData.images,
+        stock: parseInt(formData.stock, 10),
+        tags: formData.tags,
+        isFeatured: false,
+      };
+
+      await productsApi.createProduct(productData);
+      toast.success(isEdit ? 'Product updated successfully' : 'Product created successfully');
+      navigate('/seller/listings');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to save product');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  const isSubmitDisabled = isSubmitting || isUploading || formData.images.length === 0;
 
   return (
     <div className="min-h-screen bg-dark-base py-8 px-6 lg:px-12">
@@ -119,14 +200,23 @@ export const ProductForm: React.FC = () => {
                 </div>
               ))}
               
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="aspect-square rounded-lg border-2 border-dashed border-white/20 flex flex-col items-center justify-center gap-2 hover:border-gold hover:bg-gold/5 transition-colors"
-              >
-                <Upload className="w-6 h-6 text-warm-gray" />
-                <span className="text-warm-gray text-sm font-body">Upload</span>
-              </button>
+              {formData.images.length < 5 && (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="aspect-square rounded-lg border-2 border-dashed border-white/20 flex flex-col items-center justify-center gap-2 hover:border-gold hover:bg-gold/5 transition-colors disabled:opacity-50"
+                >
+                  {isUploading ? (
+                    <span className="text-warm-gray text-sm font-body">Uploading...</span>
+                  ) : (
+                    <>
+                      <Upload className="w-6 h-6 text-warm-gray" />
+                      <span className="text-warm-gray text-sm font-body">Upload</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
             
             <input
@@ -179,6 +269,7 @@ export const ProductForm: React.FC = () => {
                     required
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    disabled={isLoadingCategories}
                     className="w-full px-4 py-3 bg-dark-base border border-white/10 rounded-lg text-warm-white focus:border-gold focus:ring-1 focus:ring-gold transition-all font-body appearance-none"
                   >
                     <option value="">Select category</option>
@@ -296,7 +387,7 @@ export const ProductForm: React.FC = () => {
             </Link>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitDisabled}
               className="px-8 py-3 bg-gold text-dark-base rounded-lg font-body font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Saving...' : isEdit ? 'Update Product' : 'Create Product'}
