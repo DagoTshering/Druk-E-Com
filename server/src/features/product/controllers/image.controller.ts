@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { v2 as cloudinary } from "cloudinary";
+import cloudinary from "../../../shared/utils/cloudinary.js";
 import HTTP_STATUS from "../../../shared/constants/http.constant";
 
 export class ImageController {
@@ -48,6 +48,30 @@ export class ImageController {
       console.error("Cloudinary upload error:", error);
       return res.status(HTTP_STATUS.INTERNAL_SERVER).json({
         message: "Failed to upload images",
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }
+
+  public async deleteImage(req: Request, res: Response) {
+    try {
+      const { publicId } = req.body as { publicId: string };
+
+      if (!publicId) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
+          message: "No publicId provided",
+        });
+      }
+
+      await cloudinary.uploader.destroy(publicId);
+
+      return res.status(HTTP_STATUS.OK).json({
+        message: "Image deleted successfully",
+      });
+    } catch (error) {
+      console.error("Cloudinary delete error:", error);
+      return res.status(HTTP_STATUS.INTERNAL_SERVER).json({
+        message: "Failed to delete image",
         error: error instanceof Error ? error.message : "Unknown error",
       });
     }

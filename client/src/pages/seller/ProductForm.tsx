@@ -23,7 +23,7 @@ export const ProductForm: React.FC = () => {
     category: '',
     stock: '',
     tags: [] as string[],
-    images: [] as string[]
+    images: [] as Array<{ url: string; publicId: string; isUploading: boolean }>
   });
   const [newTag, setNewTag] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,27 +56,35 @@ export const ProductForm: React.FC = () => {
       return;
     }
 
-    // Preview images locally while uploading
-    const previewUrls = newFiles.map(file => URL.createObjectURL(file));
-    setFormData(prev => ({
-      ...prev,
-      images: [...prev.images, ...previewUrls]
+    const placeholders = newFiles.map(() => ({
+      url: '',
+      publicId: '',
+      isUploading: true
     }));
 
-    // Upload to Cloudinary
+    setFormData(prev => ({
+      ...prev,
+      images: [...prev.images, ...placeholders]
+    }));
+
     setIsUploading(true);
     try {
       const response = await productsApi.uploadImages(newFiles);
       const { imageUrls } = response;
 
-      // Replace preview URLs with actual Cloudinary URLs
       setFormData(prev => {
         const updatedImages = [...prev.images];
-        let previewIndex = 0;
+        let placeholderIndex = 0;
         for (let i = 0; i < updatedImages.length; i++) {
-          if (previewUrls.includes(updatedImages[i]) && imageUrls[previewIndex]) {
-            updatedImages[i] = imageUrls[previewIndex];
-            previewIndex++;
+          if (updatedImages[i].isUploading && imageUrls[placeholderIndex]) {
+            const fullUrl = imageUrls[placeholderIndex];
+            const publicId = `products/${fullUrl.split('/').pop()!.split('.')[0]}`;
+            updatedImages[i] = {
+              url: fullUrl,
+              publicId,
+              isUploading: false
+            };
+            placeholderIndex++;
           }
         }
         return { ...prev, images: updatedImages };
@@ -85,18 +93,32 @@ export const ProductForm: React.FC = () => {
       toast.success(`${imageUrls.length} image(s) uploaded successfully`);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Failed to upload images');
-      // Remove preview URLs on error
-      previewUrls.forEach(url => URL.revokeObjectURL(url));
       setFormData(prev => ({
         ...prev,
-        images: prev.images.filter(url => !previewUrls.includes(url))
+        images: prev.images.filter(img => !img.isUploading)
       }));
     } finally {
       setIsUploading(false);
     }
   };
 
-  const removeImage = (index: number) => {
+  const removeImage = async (index: number) => {
+    const image = formData.images[index];
+    
+    if (image.isUploading) {
+      setFormData(prev => ({
+        ...prev,
+        images: prev.images.filter((_, i) => i !== index)
+      }));
+      return;
+    }
+
+    try {
+      await productsApi.deleteImage(image.publicId);
+    } catch (error) {
+      console.error('Failed to delete image from Cloudinary:', error);
+    }
+
     setFormData(prev => ({
       ...prev,
       images: prev.images.filter((_, i) => i !== index)
@@ -142,7 +164,7 @@ export const ProductForm: React.FC = () => {
         price: formData.price,
         originalPrice: formData.originalPrice || undefined,
         categoryId: formData.category,
-        images: formData.images,
+        images: formData.images.filter(img => !img.isUploading).map(img => img.url),
         stock: parseInt(formData.stock, 10),
         tags: formData.tags,
         isFeatured: false,
@@ -158,7 +180,8 @@ export const ProductForm: React.FC = () => {
     }
   };
 
-  const isSubmitDisabled = isSubmitting || isUploading || formData.images.length === 0;
+  const hasCompletedImages = formData.images.some(img => !img.isUploading);
+  const isSubmitDisabled = isSubmitting || isUploading || !hasCompletedImages;
 
   return (
     <div className="min-h-screen bg-dark-base py-8 px-6 lg:px-12">
@@ -189,14 +212,22 @@ export const ProductForm: React.FC = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
               {formData.images.map((image, idx) => (
                 <div key={idx} className="relative aspect-square rounded-lg overflow-hidden group">
-                  <img src={image} alt="" className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => removeImage(idx)}
-                    className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
+                  {image.isUploading ? (
+                    <div className="w-full h-full bg-dark-base flex items-center justify-center">
+                      <div className="w-8 h-8 border-4 border-gold border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  ) : (
+                    <img src={image.url} alt="" className="w-full h-full object-cover" />
+                  )}
+                  {!image.isUploading && (
+                    <button
+                      type="button"
+                      onClick={() => removeImage(idx)}
+                      className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
                 </div>
               ))}
               

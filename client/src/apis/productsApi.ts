@@ -74,4 +74,7 @@ export const productsApi = {
   }) {
     return axiosInstance.post("/products", productData);
   },
+  deleteImage(publicId: string) {
+    return axiosInstance.delete("/products/upload-images", { data: { publicId } });
+  },
 };

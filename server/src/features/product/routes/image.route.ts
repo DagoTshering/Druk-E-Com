@@ -15,4 +15,11 @@ imageRoute.post(
   asyncWrapper(imageController.uploadImages)
 );
 
+imageRoute.delete(
+  "/upload-images",
+  authenticate,
+  authorizeRoles("seller", "admin"),
+  asyncWrapper(imageController.deleteImage)
+);
+
 export default imageRoute;
