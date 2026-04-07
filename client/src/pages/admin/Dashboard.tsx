@@ -2,35 +2,47 @@
 // ADMIN - DASHBOARD PAGE
 // ============================================================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Users, ShoppingBag, DollarSign, Store, Activity, UserPlus, Package } from 'lucide-react';
-import { users, orders, products } from '../../dataStore';
+import { orders, products } from '../../dataStore';
+import { adminApi } from '../../apis/adminApi';
 import { StatsCardSkeleton } from '../../components/Skeleton';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { toast } from 'sonner';
 
 export const AdminDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [totalSellers, setTotalSellers] = useState(0);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
+  const fetchStats = useCallback(async () => {
+    try {
+      const data: any = await adminApi.getUsers();
+      setTotalUsers(data.length);
+      setTotalSellers(data.filter((u: any) => u.roles.includes('seller')).length);
+    } catch (error) {
+      console.error('Failed to fetch stats:', error);
+      toast.error('Failed to load dashboard stats');
+    } finally {
       setIsLoading(false);
-    }, 700);
-    return () => clearTimeout(timer);
+    }
   }, []);
 
-  // Platform stats
-  const totalUsers = users.length;
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  // Platform stats (dummy for now)
   const totalOrders = orders.length;
   const totalProducts = products.length;
-  void totalProducts; // Used in stats
-  const totalSellers = users.filter(u => u.role === 'seller').length;
+  void totalProducts;
+  const newUsersThisWeek = 3; // Simulated
   
   const totalRevenue = orders
     .filter(o => o.status !== 'cancelled')
     .reduce((sum, o) => sum + o.total, 0);
 
   const pendingOrders = orders.filter(o => o.status === 'pending').length;
-  const newUsersThisWeek = 3; // Simulated
 
   // Activity feed
   const activities = [
