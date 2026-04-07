@@ -9,7 +9,7 @@ import adminSellerRoute from "../features/admin/routes/admin-seller.route";
 const  appRoutes  = (app:Application) => {
     app.use("/api/v1/auth", authRoute);
     app.use("/api/v1/products", productRoute);
-    app.use("/api/v1/products", imageRoute);
+    app.use("/api/v1", imageRoute);
     app.use("/api/v1/seller", sellerRoute);
     app.use("/api/v1/admin", adminSellerRoute);
 }
