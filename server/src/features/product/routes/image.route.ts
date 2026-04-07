@@ -8,7 +8,7 @@ import { imageController } from "../controllers/image.controller.js";
 const imageRoute = express.Router();
 
 imageRoute.post(
-  "/products/upload-images",
+  "/upload-images",
   authenticate,
   authorizeRoles("seller", "admin"),
   upload.array("images", 5),
@@ -16,7 +16,7 @@ imageRoute.post(
 );
 
 imageRoute.delete(
-  "/products/upload-images",
+  "/upload-images",
   authenticate,
   authorizeRoles("seller", "admin"),
   asyncWrapper(imageController.deleteImage)

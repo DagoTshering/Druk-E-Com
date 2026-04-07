@@ -55,7 +55,7 @@ export const productsApi = {
     images.forEach((image) => {
       formData.append("images", image);
     });
-    return axiosInstance.post<{ message: string; imageUrls: string[] }>("/products/upload-images", formData, {
+    return axiosInstance.post<{ message: string; imageUrls: string[] }>("/cloudinary/upload-images", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
@@ -75,6 +75,6 @@ export const productsApi = {
     return axiosInstance.post("/products", productData);
   },
   deleteImage(publicId: string) {
-    return axiosInstance.delete("/products/upload-images", { data: { publicId } });
+    return axiosInstance.delete("/cloudinary/upload-images", { data: { publicId } });
   },
 };
