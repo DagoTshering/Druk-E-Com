@@ -3,17 +3,17 @@ import cloudinary from "../../../shared/utils/cloudinary.js";
 import HTTP_STATUS from "../../../shared/constants/http.constant.js";
 import type { CloudinaryType } from "../schemas/cloudinary.schema.js";
 
-export class CloudinaryController {
-  private readonly folderMap: Record<CloudinaryType, string> = {
-    product: "products",
-    avatar: "avatars",
-  };
+const folderMap: Record<CloudinaryType, string> = {
+  product: "products",
+  avatar: "avatars",
+};
 
+export class CloudinaryController {
   public async uploadImages(req: Request, res: Response) {
     try {
       const files = req.files as Express.Multer.File[];
       const type = req.query.type as CloudinaryType;
-      const folder = this.folderMap[type];
+      const folder = folderMap[type];
 
       if (!files || files.length === 0) {
         return res.status(HTTP_STATUS.BAD_REQUEST).json({
