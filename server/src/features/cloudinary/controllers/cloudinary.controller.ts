@@ -1,11 +1,19 @@
 import { Request, Response } from "express";
 import cloudinary from "../../../shared/utils/cloudinary.js";
-import HTTP_STATUS from "../../../shared/constants/http.constant";
+import HTTP_STATUS from "../../../shared/constants/http.constant.js";
+import type { CloudinaryType } from "../schemas/cloudinary.schema.js";
 
-export class ImageController {
+export class CloudinaryController {
+  private readonly folderMap: Record<CloudinaryType, string> = {
+    product: "products",
+    avatar: "avatars",
+  };
+
   public async uploadImages(req: Request, res: Response) {
     try {
       const files = req.files as Express.Multer.File[];
+      const type = req.query.type as CloudinaryType;
+      const folder = this.folderMap[type];
 
       if (!files || files.length === 0) {
         return res.status(HTTP_STATUS.BAD_REQUEST).json({
@@ -17,7 +25,7 @@ export class ImageController {
         return new Promise<string>((resolve, reject) => {
           const uploadStream = cloudinary.uploader.upload_stream(
             {
-              folder: "products",
+              folder,
               transformation: [
                 { width: 1000, height: 1000, crop: "limit" },
                 { quality: "auto" },
@@ -78,4 +86,4 @@ export class ImageController {
   }
 }
 
-export const imageController = new ImageController();
+export const cloudinaryController = new CloudinaryController();
