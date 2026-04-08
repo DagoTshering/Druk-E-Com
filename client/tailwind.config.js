@@ -72,6 +72,9 @@ module.exports = {
         "dark-lg": "0 8px 40px rgba(0, 0, 0, 0.6)",
       },
       keyframes: {
+        spin: {
+          to: { transform: "rotate(360deg)" },
+        },
         "accordion-down": {
           from: { height: "0" },
           to: { height: "var(--radix-accordion-content-height)" },
@@ -122,6 +125,7 @@ module.exports = {
         },
       },
       animation: {
+        spin: "spin 1s linear infinite",
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "caret-blink": "caret-blink 1.25s ease-out infinite",
