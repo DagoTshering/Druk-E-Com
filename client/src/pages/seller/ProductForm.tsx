@@ -7,6 +7,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Upload, X, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { productsApi, type Category } from '../../apis/productsApi';
+import { Spinner } from '@/components/ui/spinner';
 
 export const ProductForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -214,7 +215,7 @@ export const ProductForm: React.FC = () => {
                 <div key={idx} className="relative aspect-square rounded-lg overflow-hidden group">
                   {image.isUploading ? (
                     <div className="w-full h-full bg-dark-base flex items-center justify-center">
-                      <div className="w-8 h-8 border-4 border-gold border-t-transparent rounded-full animate-spin" />
+                      <Spinner className="size-8 text-gold" />
                     </div>
                   ) : (
                     <img src={image.url} alt="" className="w-full h-full object-cover" />
