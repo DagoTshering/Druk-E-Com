@@ -8,6 +8,14 @@ import { ArrowLeft, Upload, X, Plus, ChevronDown, ChevronUp } from 'lucide-react
 import { toast } from 'sonner';
 import { productsApi, type Category } from '../../apis/productsApi';
 import { Spinner } from '@/components/ui/spinner';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 interface Variant {
   id?: string;
@@ -60,6 +68,9 @@ export const ProductForm: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const [attributeDialogOpen, setAttributeDialogOpen] = useState(false);
+  const [attributeDialogVariantIndex, setAttributeDialogVariantIndex] = useState<number | null>(null);
+  const [attributeDialogValue, setAttributeDialogValue] = useState('');
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -221,14 +232,30 @@ export const ProductForm: React.FC = () => {
     });
   };
 
-  const addVariantAttribute = (index: number) => {
-    const key = prompt('Enter attribute name (e.g., size, color):');
+  const openAttributeDialog = (index: number) => {
+    setAttributeDialogVariantIndex(index);
+    setAttributeDialogValue('');
+    setAttributeDialogOpen(true);
+  };
+
+  const confirmAttribute = () => {
+    if (attributeDialogVariantIndex === null) return;
+    const key = attributeDialogValue.trim();
     if (!key) return;
-    if (variants[index].attributes[key] !== undefined) {
+    if (variants[attributeDialogVariantIndex].attributes[key] !== undefined) {
       toast.error(`Attribute "${key}" already exists`);
       return;
     }
-    updateVariantAttribute(index, key, '');
+    updateVariantAttribute(attributeDialogVariantIndex, key, '');
+    setAttributeDialogOpen(false);
+    setAttributeDialogVariantIndex(null);
+    setAttributeDialogValue('');
+  };
+
+  const cancelAttributeDialog = () => {
+    setAttributeDialogOpen(false);
+    setAttributeDialogVariantIndex(null);
+    setAttributeDialogValue('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -493,7 +520,7 @@ export const ProductForm: React.FC = () => {
                           <label className="text-warm-gray text-sm font-body">Attributes</label>
                           <button
                             type="button"
-                            onClick={() => addVariantAttribute(idx)}
+                            onClick={() => openAttributeDialog(idx)}
                             className="text-gold text-sm font-body hover:text-gold-light"
                           >
                             + Add Attribute
@@ -675,6 +702,42 @@ export const ProductForm: React.FC = () => {
             </button>
           </div>
         </form>
+
+        <Dialog open={attributeDialogOpen} onOpenChange={setAttributeDialogOpen}>
+          <DialogContent className="bg-dark-surface border-white/10">
+            <DialogHeader>
+              <DialogTitle className="text-warm-white">Add Attribute</DialogTitle>
+              <DialogDescription className="text-warm-gray">
+                Enter the attribute name (e.g., size, color)
+              </DialogDescription>
+            </DialogHeader>
+            <input
+              type="text"
+              value={attributeDialogValue}
+              onChange={(e) => setAttributeDialogValue(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && confirmAttribute()}
+              placeholder="Attribute name"
+              className="w-full px-4 py-3 bg-dark-base border border-white/10 rounded-lg text-warm-white placeholder:text-warm-gray/50 focus:border-gold focus:ring-1 focus:ring-gold transition-all font-body"
+              autoFocus
+            />
+            <DialogFooter>
+              <button
+                type="button"
+                onClick={cancelAttributeDialog}
+                className="px-4 py-2 border border-white/20 text-warm-white rounded-lg hover:bg-white/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmAttribute}
+                className="px-4 py-2 bg-gold text-dark-base rounded-lg hover:bg-gold-light transition-colors"
+              >
+                Add
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
