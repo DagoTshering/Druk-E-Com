@@ -45,13 +45,13 @@ export function VariantTable({
                 {name}
               </th>
             ))}
-            <th className="px-4 py-3 text-left text-warm-gray text-sm font-body font-medium w-28">
+            <th className="px-4 py-3 text-left text-warm-gray text-sm font-body font-medium w-32">
               Price *
             </th>
-            <th className="px-4 py-3 text-left text-warm-gray text-sm font-body font-medium w-28">
+            <th className="px-4 py-3 text-left text-warm-gray text-sm font-body font-medium w-32">
               Original
             </th>
-            <th className="px-4 py-3 text-left text-warm-gray text-sm font-body font-medium w-24">
+            <th className="px-4 py-3 text-left text-warm-gray text-sm font-body font-medium w-28">
               Stock *
             </th>
             <th className="px-4 py-3 text-left text-warm-gray text-sm font-body font-medium">
@@ -83,11 +83,17 @@ export function VariantTable({
                 <div className="relative">
                   <span className="absolute left-2 top-1/2 -translate-y-1/2 text-warm-gray text-xs">$</span>
                   <input
-                    type="number"
-                    min="0"
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal"
                     value={variant.price}
-                    onChange={(e) => onUpdateVariant(idx, { price: e.target.value })}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9.]/g, '');
+                      const parts = val.split('.');
+                      const formatted = parts.length > 2 
+                        ? parts[0] + '.' + parts.slice(1).join('')
+                        : val;
+                      onUpdateVariant(idx, { price: formatted });
+                    }}
                     className="w-full pl-6 pr-2 py-1.5 bg-dark-base border border-white/10 rounded text-warm-white text-sm font-body focus:border-gold focus:outline-none"
                     placeholder="0.00"
                   />
@@ -97,11 +103,17 @@ export function VariantTable({
                 <div className="relative">
                   <span className="absolute left-2 top-1/2 -translate-y-1/2 text-warm-gray text-xs">$</span>
                   <input
-                    type="number"
-                    min="0"
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal"
                     value={variant.originalPrice}
-                    onChange={(e) => onUpdateVariant(idx, { originalPrice: e.target.value })}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9.]/g, '');
+                      const parts = val.split('.');
+                      const formatted = parts.length > 2 
+                        ? parts[0] + '.' + parts.slice(1).join('')
+                        : val;
+                      onUpdateVariant(idx, { originalPrice: formatted });
+                    }}
                     className="w-full pl-6 pr-2 py-1.5 bg-dark-base border border-white/10 rounded text-warm-white text-sm font-body focus:border-gold focus:outline-none"
                     placeholder="0.00"
                   />
@@ -109,10 +121,13 @@ export function VariantTable({
               </td>
               <td className="px-4 py-2">
                 <input
-                  type="number"
-                  min="0"
+                  type="text"
+                  inputMode="numeric"
                   value={variant.stock}
-                  onChange={(e) => onUpdateVariant(idx, { stock: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, '');
+                    onUpdateVariant(idx, { stock: val });
+                  }}
                   className="w-full px-2 py-1.5 bg-dark-base border border-white/10 rounded text-warm-white text-sm font-body focus:border-gold focus:outline-none"
                   placeholder="0"
                 />

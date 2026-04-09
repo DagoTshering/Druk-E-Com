@@ -1,14 +1,17 @@
 import { eq, and, like, or, sql, desc } from "drizzle-orm";
+import { randomBytes } from "crypto";
 import { db } from "../../../shared/database/connection";
-import { NotFoundException, ForbiddenException } from "../../../shared/errors/error.core";
+import { NotFoundException, ForbiddenException, BadRequestException } from "../../../shared/errors/error.core";
 import { products, categories, productVariants } from "../models";
 import type { CreateProductPayload, UpdateProductPayload, GetProductsPayload } from "../schemas/product.schema";
 
 function generateSlug(name: string): string {
-  return name
+  const base = name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+  const suffix = randomBytes(4).toString("hex");
+  return `${base}-${suffix}`;
 }
 
 class ProductService {
@@ -18,6 +21,22 @@ class ProductService {
       .from(categories)
       .where(eq(categories.id, categoryId));
     return cat?.name || "";
+  }
+
+  private async checkSkuUniqueness(skus: (string | undefined)[], excludeProductId?: string): Promise<string[]> {
+    const validSkus = skus.filter((sku): sku is string => !!sku);
+    if (validSkus.length === 0) return [];
+
+    const existing = await db
+      .select({ sku: productVariants.sku, productId: productVariants.productId })
+      .from(productVariants)
+      .where(validSkus.length === 1 ? eq(productVariants.sku, validSkus[0]) : or(...validSkus.map(sku => eq(productVariants.sku, sku))!));
+
+    const filtered = excludeProductId
+      ? existing.filter(v => v.productId !== excludeProductId)
+      : existing;
+
+    return filtered.map(v => v.sku!);
   }
 
   public async getCategories() {
@@ -156,11 +175,7 @@ class ProductService {
         isFeatured: products.isFeatured,
         createdAt: products.createdAt,
         updatedAt: products.updatedAt,
-        category: {
-          id: categories.id,
-          name: categories.name,
-          slug: categories.slug,
-        },
+        category: categories.name,
       })
       .from(products)
       .leftJoin(categories, eq(products.categoryId, categories.id))
@@ -197,18 +212,29 @@ class ProductService {
       })
       .returning();
 
-    const variantInserts = data.variants.map((variant, index) => ({
+    const skusToCheck = data.variants.map(v => v.sku);
+    const duplicateSkus = await this.checkSkuUniqueness(skusToCheck);
+    if (duplicateSkus.length > 0) {
+      throw new BadRequestException(`SKU(s) already exist: ${duplicateSkus.join(", ")}`);
+    }
+
+    const preliminaryVariants = data.variants.map((variant, index) => ({
       productId: product.id,
       attributes: variant.attributes,
       sku: variant.sku,
       price: variant.price,
       originalPrice: variant.originalPrice,
       stock: variant.stock,
-      weight: variant.weight,
       images: variant.images,
-      isDefault: variant.isDefault || index === 0,
+      isDefault: variant.isDefault ?? index === 0,
       isActive: variant.isActive,
       lowStockThreshold: variant.lowStockThreshold,
+    }));
+
+    const firstDefaultIndex = preliminaryVariants.findIndex(v => v.isDefault);
+    const variantInserts = preliminaryVariants.map((v, i) => ({
+      ...v,
+      isDefault: i === firstDefaultIndex,
     }));
 
     await db.insert(productVariants).values(variantInserts);
@@ -234,7 +260,9 @@ class ProductService {
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
     if (data.name !== undefined) {
       updateData.name = data.name;
-      updateData.slug = generateSlug(data.name);
+      if (data.name !== existing[0].name) {
+        updateData.slug = generateSlug(data.name);
+      }
     }
     if (data.description !== undefined) updateData.description = data.description;
     if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
@@ -250,6 +278,12 @@ class ProductService {
       .where(eq(products.id, id));
 
     if (data.variants !== undefined) {
+      const skusToCheck = data.variants.map(v => v.sku);
+      const duplicateSkus = await this.checkSkuUniqueness(skusToCheck, id);
+      if (duplicateSkus.length > 0) {
+        throw new BadRequestException(`SKU(s) already exist: ${duplicateSkus.join(", ")}`);
+      }
+
       await db.delete(productVariants).where(eq(productVariants.productId, id));
 
       const variantInserts = data.variants.map((variant, index) => ({
@@ -259,7 +293,6 @@ class ProductService {
         price: variant.price,
         originalPrice: variant.originalPrice,
         stock: variant.stock,
-        weight: variant.weight,
         images: variant.images,
         isDefault: variant.isDefault || index === 0,
         isActive: variant.isActive,

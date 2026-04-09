@@ -24,7 +24,6 @@ export const productVariantSchema = z.object({
   price: priceSchema,
   originalPrice: optionalPriceSchema,
   stock: z.number().int().min(0, { message: "Stock must be at least 0" }),
-  weight: optionalPriceSchema,
   images: z.array(z.string()).optional(),
   isDefault: z.boolean().default(false),
   isActive: z.boolean().default(true),

@@ -6,7 +6,7 @@ import type {
   VariantAttribute,
   ImageItem,
 } from '../utils/types';
-import { VISUAL_ATTRIBUTES, getImageMapKey } from '../utils/types';
+import { VISUAL_ATTRIBUTES, getImageMapKey, getVisualAttributeCombinations } from '../utils/types';
 import { generateVariants } from '../utils/generateVariants';
 import { generateSku, regenerateSku } from '../utils/generateSku';
 import { productsApi } from '@/apis/productsApi';
@@ -20,6 +20,7 @@ const initialVariant = (isDefault = true): Variant => ({
   sku: '',
   isDefault,
   isActive: true,
+  lowStockThreshold: 5,
 });
 
 const initialState: ProductFormState = {
@@ -117,13 +118,26 @@ export function useProductForm() {
       const visualAttributes = state.variantAttributes.filter(attr =>
         VISUAL_ATTRIBUTES.includes(attr.name.toLowerCase())
       );
-      for (const attr of visualAttributes) {
-        for (const value of attr.values) {
-          const key = getImageMapKey(attr.name, value);
+      if (visualAttributes.length === 0) {
+        return true;
+      }
+      if (visualAttributes.length === 1) {
+        for (const value of visualAttributes[0].values) {
+          const key = `${visualAttributes[0].name.toLowerCase()}:${value}`;
           const images = state.variantImageMap[key] || [];
           const completedImages = images.filter(img => !img.isUploading);
           if (completedImages.length === 0) {
-            toast.error(`Please upload at least one image for ${attr.name}: ${value}`);
+            toast.error(`Please upload at least one image for ${visualAttributes[0].name}: ${value}`);
+            return false;
+          }
+        }
+      } else {
+        const combinations = getVisualAttributeCombinations(visualAttributes);
+        for (const combo of combinations) {
+          const images = state.variantImageMap[combo.key] || [];
+          const completedImages = images.filter(img => !img.isUploading);
+          if (completedImages.length === 0) {
+            toast.error(`Please upload at least one image for ${combo.label}`);
             return false;
           }
         }
@@ -250,22 +264,21 @@ export function useProductForm() {
       return;
     }
 
-    const newVariants = generateVariants(state.variantAttributes, []);
-    
+    const newVariants = generateVariants(state.variantAttributes, state.variants);
+
     const variantsWithSku = newVariants.map(variant => ({
       ...variant,
       sku: generateSku(state.name || 'product', variant.attributes),
     }));
 
-    const defaultIndex = 0;
-    const variantsFinal = variantsWithSku.map((v, i) => ({
-      ...v,
-      isDefault: i === defaultIndex,
-    }));
+    const hasDefault = variantsWithSku.some(v => v.isDefault);
+    const variantsFinal = hasDefault
+      ? variantsWithSku
+      : variantsWithSku.map((v, i) => ({ ...v, isDefault: i === 0 }));
 
     updateState({ variants: variantsFinal });
     toast.success(`Generated ${variantsFinal.length} variants`);
-  }, [state.variantAttributes, state.name, updateState]);
+  }, [state.variantAttributes, state.name, state.variants, updateState]);
 
   const updateVariant = useCallback((index: number, updates: Partial<Variant>) => {
     setState(prev => {
@@ -327,8 +340,8 @@ export function useProductForm() {
     }));
 
     try {
-      const response = await productsApi.uploadImages(files);
-      const { imageUrls } = response.data;
+      const response = await productsApi.uploadImages(files) as unknown as { message: string; imageUrls: string[] };
+      const { imageUrls } = response;
 
       setState(prev => {
         const updatedImages = [...prev.productImages];
@@ -378,8 +391,8 @@ export function useProductForm() {
     }));
 
     try {
-      const response = await productsApi.uploadImages(files);
-      const { imageUrls } = response.data;
+      const response = await productsApi.uploadImages(files) as unknown as { message: string; imageUrls: string[] };
+      const { imageUrls } = response;
 
       setState(prev => {
         const currentImages = prev.variantImageMap[key] || [];
@@ -452,15 +465,43 @@ export function useProductForm() {
       .filter(img => !img.isUploading)
       .map(img => img.url);
 
+    const getVariantImages = (variant: Variant): string[] => {
+      const visualAttrEntries = Object.entries(variant.attributes)
+        .filter(([name]) => VISUAL_ATTRIBUTES.includes(name.toLowerCase()));
+
+      if (visualAttrEntries.length === 0) return [];
+
+      if (visualAttrEntries.length === 1) {
+        const [name, value] = visualAttrEntries[0];
+        const key = getImageMapKey(name, value);
+        return (state.variantImageMap[key] || [])
+          .filter(img => !img.isUploading)
+          .map(img => img.url);
+      }
+
+      const pairs: [string, string][] = visualAttrEntries.map(([name, value]) => [name, value]);
+      const combinationKey = getImageMapKey(pairs);
+      const combinationImages = (state.variantImageMap[combinationKey] || [])
+        .filter(img => !img.isUploading)
+        .map(img => img.url);
+
+      if (combinationImages.length > 0) return combinationImages;
+
+      const fallbackImages: string[] = [];
+      for (const [name, value] of visualAttrEntries) {
+        const key = getImageMapKey(name, value);
+        const imgs = (state.variantImageMap[key] || [])
+          .filter(img => !img.isUploading)
+          .map(img => img.url);
+        fallbackImages.push(...imgs);
+      }
+
+      return fallbackImages;
+    };
+
     const variants = state.hasVariants
       ? state.variants.map(v => {
-          const attrKey = getImageMapKey(
-            Object.keys(v.attributes)[0],
-            Object.values(v.attributes)[0]
-          );
-          const variantImages = (state.variantImageMap[attrKey] || [])
-            .filter(img => !img.isUploading)
-            .map(img => img.url);
+          const variantImages = getVariantImages(v);
 
           return {
             attributes: v.attributes,
@@ -471,6 +512,7 @@ export function useProductForm() {
             isDefault: v.isDefault,
             isActive: v.isActive,
             images: variantImages.length > 0 ? variantImages : undefined,
+            lowStockThreshold: v.lowStockThreshold,
           };
         })
       : [
@@ -482,6 +524,7 @@ export function useProductForm() {
             stock: parseInt(state.variants[0]?.stock || '0', 10),
             isDefault: true,
             isActive: true,
+            lowStockThreshold: state.variants[0]?.lowStockThreshold ?? 5,
           },
         ];
 

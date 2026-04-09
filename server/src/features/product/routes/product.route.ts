@@ -26,8 +26,6 @@ productRoute.get(
 
 productRoute.get(
   "/:id",
-  authenticate,
-  authorizeRoles("seller", "admin"),
   asyncWrapper(productController.getProductById)
 );
 

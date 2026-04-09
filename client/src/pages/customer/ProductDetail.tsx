@@ -98,11 +98,17 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ setCart }) => {
           {/* Image Gallery */}
           <div className="space-y-4 animate-fade-in">
             <div className="aspect-square rounded-2xl overflow-hidden bg-dark-surface">
-              <img
-                src={product.images[selectedImage]}
-                alt={product.name}
-                className="w-full h-full object-cover"
-              />
+              {product.images && product.images[selectedImage] ? (
+                <img
+                  src={product.images[selectedImage]}
+                  alt={product.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-warm-gray">
+                  No Image
+                </div>
+              )}
             </div>
             {product.images.length > 1 && (
               <div className="flex gap-3">

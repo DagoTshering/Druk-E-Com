@@ -78,17 +78,44 @@ export function VariantsStep({
       {!state.hasVariants && state.variants.length > 0 && (
         <div className="bg-dark-surface rounded-xl border border-white/5 p-6">
           <h3 className="text-lg font-display text-warm-white mb-4">Pricing & Stock</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block text-warm-gray text-sm font-body mb-2">Price *</label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-warm-gray">$</span>
                 <input
-                  type="number"
-                  min="0"
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   value={state.variants[0].price}
-                  onChange={(e) => updateVariant(0, { price: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9.]/g, '');
+                    const parts = val.split('.');
+                    const formatted = parts.length > 2
+                      ? parts[0] + '.' + parts.slice(1).join('')
+                      : val;
+                    updateVariant(0, { price: formatted });
+                  }}
+                  placeholder="0.00"
+                  className="w-full pl-10 pr-4 py-3 bg-dark-base border border-white/10 rounded-lg text-warm-white placeholder:text-warm-gray/50 focus:border-gold focus:ring-1 focus:ring-gold transition-all font-body"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-warm-gray text-sm font-body mb-2">Original Price</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-warm-gray">$</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={state.variants[0].originalPrice}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9.]/g, '');
+                    const parts = val.split('.');
+                    const formatted = parts.length > 2
+                      ? parts[0] + '.' + parts.slice(1).join('')
+                      : val;
+                    updateVariant(0, { originalPrice: formatted });
+                  }}
                   placeholder="0.00"
                   className="w-full pl-10 pr-4 py-3 bg-dark-base border border-white/10 rounded-lg text-warm-white placeholder:text-warm-gray/50 focus:border-gold focus:ring-1 focus:ring-gold transition-all font-body"
                 />
@@ -97,10 +124,13 @@ export function VariantsStep({
             <div>
               <label className="block text-warm-gray text-sm font-body mb-2">Stock *</label>
               <input
-                type="number"
-                min="0"
+                type="text"
+                inputMode="numeric"
                 value={state.variants[0].stock}
-                onChange={(e) => updateVariant(0, { stock: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, '');
+                  updateVariant(0, { stock: val });
+                }}
                 placeholder="0"
                 className="w-full px-4 py-3 bg-dark-base border border-white/10 rounded-lg text-warm-white placeholder:text-warm-gray/50 focus:border-gold focus:ring-1 focus:ring-gold transition-all font-body"
               />

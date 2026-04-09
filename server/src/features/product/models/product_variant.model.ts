@@ -11,7 +11,6 @@ export const productVariants = pgTable("product_variants", {
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   originalPrice: decimal("original_price", { precision: 10, scale: 2 }),
   stock: integer("stock").notNull().default(0),
-  weight: decimal("weight", { precision: 10, scale: 2 }),
   images: text("images").array().default([]),
   isDefault: boolean("is_default").default(false),
   isActive: boolean("is_active").default(true),

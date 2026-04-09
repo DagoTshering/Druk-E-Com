@@ -61,6 +61,7 @@ export function generateVariants(
       sku: existingVariant?.sku || '',
       isDefault: existingVariant?.isDefault ?? index === 0,
       isActive: existingVariant?.isActive ?? true,
+      lowStockThreshold: existingVariant?.lowStockThreshold ?? 5,
     };
   });
 

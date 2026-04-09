@@ -1,6 +1,6 @@
 import { ImageUploader } from '../components/ImageUploader';
 import type { ProductFormState } from '../utils/types';
-import { VISUAL_ATTRIBUTES, getImageMapKey } from '../utils/types';
+import { VISUAL_ATTRIBUTES, getVisualAttributeCombinations } from '../utils/types';
 
 interface ImagesStepProps {
   state: ProductFormState;
@@ -56,14 +56,14 @@ export function ImagesStep({
           </div>
         ) : (
           <div className="space-y-6">
-            {visualAttributes.map(attr => (
-              <div key={attr.name} className="border border-white/10 rounded-lg p-4">
+            {visualAttributes.length === 1 ? (
+              <div className="border border-white/10 rounded-lg p-4">
                 <h4 className="text-warm-white font-body font-medium mb-4">
-                  {attr.name}
+                  {visualAttributes[0].name}
                 </h4>
                 <div className="space-y-4">
-                  {attr.values.map(value => {
-                    const key = getImageMapKey(attr.name, value);
+                  {visualAttributes[0].values.map(value => {
+                    const key = `${visualAttributes[0].name.toLowerCase()}:${value}`;
                     const images = state.variantImageMap[key] || [];
                     return (
                       <div key={value}>
@@ -81,7 +81,24 @@ export function ImagesStep({
                   })}
                 </div>
               </div>
-            ))}
+            ) : (
+              getVisualAttributeCombinations(visualAttributes).map(combo => {
+                const images = state.variantImageMap[combo.key] || [];
+                return (
+                  <div key={combo.key} className="border border-white/10 rounded-lg p-4">
+                    <h4 className="text-warm-white font-body font-medium mb-4">
+                      {combo.label}
+                    </h4>
+                    <ImageUploader
+                      images={images}
+                      onUpload={(files) => uploadVariantImages(combo.key, files)}
+                      onRemove={(index) => removeVariantImage(combo.key, index)}
+                      maxImages={5}
+                    />
+                  </div>
+                );
+              })
+            )}
           </div>
         )}
       </div>

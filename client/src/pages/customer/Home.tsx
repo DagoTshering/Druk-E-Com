@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, ShoppingCart, Star, Filter, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Search, ShoppingCart, Filter, ChevronRight, ChevronLeft } from 'lucide-react';
 import { productsApi, type Product, type Category } from '../../apis/productsApi';
 import { ProductCardSkeleton } from '../../components/Skeleton';
 import { toast } from 'sonner';
@@ -319,12 +319,18 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart, delay }
       style={{ animationDelay: `${delay}s` }}
     >
       <Link to={`/product/${product.id}`} className="block relative">
-        <div className="aspect-square overflow-hidden">
-          <img
-            src={product.images[0]}
-            alt={product.name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-          />
+        <div className="aspect-square overflow-hidden bg-dark-elevated">
+          {product.images && product.images[0] ? (
+            <img
+              src={product.images[0]}
+              alt={product.name}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-warm-gray">
+              No Image
+            </div>
+          )}
         </div>
         {originalPrice && (
           <span className="absolute top-3 left-3 px-2 py-1 bg-gold text-dark-base text-xs font-bold rounded">

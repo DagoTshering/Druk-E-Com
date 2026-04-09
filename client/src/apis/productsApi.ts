@@ -33,8 +33,10 @@ export interface Variant {
   price: string;
   originalPrice: string | null;
   stock: number;
+  images: string[];
   isDefault: boolean;
   isActive: boolean;
+  lowStockThreshold: number;
 }
 
 export interface ProductsResponse {
@@ -88,6 +90,7 @@ export const productsApi = {
       isDefault: boolean;
       isActive: boolean;
       images?: string[];
+      lowStockThreshold?: number;
     }>;
   }) {
     return axiosInstance.post("/products", productData);

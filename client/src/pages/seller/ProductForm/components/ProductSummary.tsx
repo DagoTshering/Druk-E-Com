@@ -1,5 +1,5 @@
 import type { ProductFormState } from '../utils/types';
-import { getImageMapKey, VISUAL_ATTRIBUTES } from '../utils/types';
+import { VISUAL_ATTRIBUTES, getVisualAttributeCombinations } from '../utils/types';
 
 interface ProductSummaryProps {
   state: ProductFormState;
@@ -103,33 +103,51 @@ export function ProductSummary({ state, categories }: ProductSummaryProps) {
           </div>
         ) : (
           <div className="space-y-4">
-            {state.variantAttributes
-              .filter(attr => VISUAL_ATTRIBUTES.includes(attr.name.toLowerCase()))
-              .map(attr => (
-                <div key={attr.name}>
-                  <h4 className="text-warm-white font-body font-medium mb-2">{attr.name}</h4>
-                  <div className="space-y-3">
-                    {attr.values.map(value => {
-                      const key = getImageMapKey(attr.name, value);
-                      const images = state.variantImageMap[key] || [];
-                      return (
-                        <div key={value}>
-                          <span className="text-warm-gray text-sm">{value}</span>
-                          <div className="grid grid-cols-4 gap-2 mt-1">
-                            {images
-                              .filter(img => !img.isUploading)
-                              .map((img, idx) => (
-                                <div key={idx} className="aspect-square rounded-lg overflow-hidden">
-                                  <img src={img.url} alt="" className="w-full h-full object-cover" />
-                                </div>
-                              ))}
+            {(() => {
+              const visualAttrs = state.variantAttributes.filter(attr =>
+                VISUAL_ATTRIBUTES.includes(attr.name.toLowerCase())
+              );
+              if (visualAttrs.length === 0) return null;
+
+              if (visualAttrs.length === 1) {
+                return visualAttrs[0].values.map(value => {
+                  const key = `${visualAttrs[0].name.toLowerCase()}:${value}`;
+                  const images = state.variantImageMap[key] || [];
+                  return (
+                    <div key={value}>
+                      <span className="text-warm-gray text-sm">{value}</span>
+                      <div className="grid grid-cols-4 gap-2 mt-1">
+                        {images
+                          .filter(img => !img.isUploading)
+                          .map((img, idx) => (
+                            <div key={idx} className="aspect-square rounded-lg overflow-hidden">
+                              <img src={img.url} alt="" className="w-full h-full object-cover" />
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  );
+                });
+              }
+
+              return getVisualAttributeCombinations(visualAttrs).map(combo => {
+                const images = state.variantImageMap[combo.key] || [];
+                return (
+                  <div key={combo.key}>
+                    <span className="text-warm-gray text-sm">{combo.label}</span>
+                    <div className="grid grid-cols-4 gap-2 mt-1">
+                      {images
+                        .filter(img => !img.isUploading)
+                        .map((img, idx) => (
+                          <div key={idx} className="aspect-square rounded-lg overflow-hidden">
+                            <img src={img.url} alt="" className="w-full h-full object-cover" />
                           </div>
-                        </div>
-                      );
-                    })}
+                        ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              });
+            })()}
           </div>
         )}
       </div>
