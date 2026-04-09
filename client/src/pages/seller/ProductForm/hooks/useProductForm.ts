@@ -71,11 +71,16 @@ export function useProductForm() {
 
   const validateStep2 = useCallback((): boolean => {
     if (!state.hasVariants) {
-      if (!state.variants[0]?.price) {
+      const variant = state.variants[0];
+      const sku = variant?.sku || regenerateSku(state.name || 'product', {});
+      if (variant?.sku !== sku) {
+        updateState({ variants: [{ ...variant, sku }] });
+      }
+      if (!variant?.price) {
         toast.error('Price is required');
         return false;
       }
-      if (!state.variants[0]?.stock) {
+      if (!variant?.stock) {
         toast.error('Stock is required');
         return false;
       }
