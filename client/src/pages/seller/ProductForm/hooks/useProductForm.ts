@@ -154,10 +154,18 @@ export function useProductForm() {
   const nextStep = useCallback(() => {
     if (!validateStep(state.currentStep)) return;
     markStepCompleted(state.currentStep);
-    if (state.currentStep < 3) {
+
+    // Auto-generate SKU for single product when moving to Step 2 (Variants)
+    if (state.currentStep === 0 && !state.hasVariants && !state.variants[0]?.sku) {
+      const sku = regenerateSku(state.name || 'product', {});
+      updateState({
+        variants: [{ ...state.variants[0], sku }],
+        currentStep: state.currentStep + 1,
+      });
+    } else if (state.currentStep < 3) {
       updateState({ currentStep: state.currentStep + 1 });
     }
-  }, [state.currentStep, validateStep, markStepCompleted, updateState]);
+  }, [state.currentStep, state.hasVariants, state.name, state.variants, validateStep, markStepCompleted, updateState]);
 
   const prevStep = useCallback(() => {
     if (state.currentStep > 0) {
