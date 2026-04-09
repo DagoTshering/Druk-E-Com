@@ -1,10 +1,9 @@
-import React from 'react';
 import { ProductSummary } from '../components/ProductSummary';
-import { Category } from '@/apis/productsApi';
-import { UseProductFormReturn } from '../hooks/useProductForm';
+import type { Category } from '@/apis/productsApi';
+import type { ProductFormState } from '../utils/types';
 
 interface ReviewStepProps {
-  state: ReturnType<typeof UseProductFormReturn>['state'];
+  state: ProductFormState;
   categories: Category[];
   submit: () => Promise<boolean>;
 }

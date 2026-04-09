@@ -10,16 +10,16 @@ import {
 } from '@/components/ui/dialog';
 import { VariantTable } from '../components/VariantTable';
 import { AttributeChipInput } from '../components/AttributeChipInput';
-import { VariantAttribute, COMMON_ATTRIBUTES, VISUAL_ATTRIBUTES } from '../utils/types';
-import { UseProductFormReturn } from '../hooks/useProductForm';
+import type { VariantAttribute, ProductFormState, Variant } from '../utils/types';
+import { COMMON_ATTRIBUTES, VISUAL_ATTRIBUTES } from '../utils/types';
 
 interface VariantsStepProps {
-  state: ReturnType<typeof UseProductFormReturn>['state'];
+  state: ProductFormState;
   addVariantAttribute: (attribute: VariantAttribute) => void;
   removeVariantAttribute: (name: string) => void;
   updateVariantAttributeValues: (name: string, values: string[]) => void;
   generateAllVariants: () => void;
-  updateVariant: (index: number, updates: Partial<ReturnType<typeof UseProductFormReturn>['state']['variants'][0]>) => void;
+  updateVariant: (index: number, updates: Partial<Variant>) => void;
   deleteVariant: (index: number) => void;
   updateVariantSku: (index: number, sku: string) => void;
   setHasVariants: (value: boolean) => void;
@@ -38,16 +38,6 @@ export function VariantsStep({
 }: VariantsStepProps) {
   const [attributeDialogOpen, setAttributeDialogOpen] = React.useState(false);
   const [selectedAttribute, setSelectedAttribute] = React.useState<string>('');
-
-  const handleAddAttribute = () => {
-    if (!selectedAttribute) return;
-    const attr = COMMON_ATTRIBUTES.find(a => a.name === selectedAttribute);
-    if (attr) {
-      addVariantAttribute({ name: attr.name, values: attr.values });
-    }
-    setAttributeDialogOpen(false);
-    setSelectedAttribute('');
-  };
 
   const availableAttributes = COMMON_ATTRIBUTES.filter(
     common => !state.variantAttributes.some(

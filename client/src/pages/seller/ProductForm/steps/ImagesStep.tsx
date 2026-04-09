@@ -1,10 +1,9 @@
-import React from 'react';
 import { ImageUploader } from '../components/ImageUploader';
+import type { ProductFormState } from '../utils/types';
 import { VISUAL_ATTRIBUTES, getImageMapKey } from '../utils/types';
-import { UseProductFormReturn } from '../hooks/useProductForm';
 
 interface ImagesStepProps {
-  state: ReturnType<typeof UseProductFormReturn>['state'];
+  state: ProductFormState;
   uploadProductImages: (files: File[]) => void;
   uploadVariantImages: (key: string, files: File[]) => void;
   removeProductImage: (index: number) => void;

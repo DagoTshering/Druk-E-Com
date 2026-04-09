@@ -1,10 +1,10 @@
 import React from 'react';
 import { Plus, X } from 'lucide-react';
-import { Category } from '@/apis/productsApi';
-import { UseProductFormReturn } from '../hooks/useProductForm';
+import type { Category } from '@/apis/productsApi';
+import type { ProductFormState } from '../utils/types';
 
 interface ProductInfoStepProps {
-  state: ReturnType<typeof UseProductFormReturn>['state'];
+  state: ProductFormState;
   categories: Category[];
   isLoadingCategories: boolean;
   setName: (name: string) => void;

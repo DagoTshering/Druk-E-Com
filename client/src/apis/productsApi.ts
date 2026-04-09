@@ -64,13 +64,21 @@ export const productsApi = {
   createProduct(productData: {
     name: string;
     description: string;
-    price: string;
-    originalPrice?: string;
     categoryId: string;
-    images: string[];
-    stock: number;
+    brand?: string;
     tags: string[];
+    images: string[];
     isFeatured: boolean;
+    variants: Array<{
+      attributes: Record<string, string>;
+      sku: string;
+      price: string;
+      originalPrice?: string;
+      stock: number;
+      isDefault: boolean;
+      isActive: boolean;
+      images?: string[];
+    }>;
   }) {
     return axiosInstance.post("/products", productData);
   },

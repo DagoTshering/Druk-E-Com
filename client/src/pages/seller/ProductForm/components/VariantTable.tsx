@@ -1,6 +1,5 @@
-import React from 'react';
 import { Trash2 } from 'lucide-react';
-import { Variant, VariantAttribute } from '../utils/types';
+import type { Variant, VariantAttribute } from '../utils/types';
 import { regenerateSku } from '../utils/generateSku';
 
 interface VariantTableProps {

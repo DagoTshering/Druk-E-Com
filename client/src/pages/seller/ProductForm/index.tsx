@@ -2,10 +2,9 @@
 // SELLER - MULTI-STEP PRODUCT CREATION WIZARD
 // ============================================================================
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
-import { toast } from 'sonner';
 import { productsApi, type Category } from '@/apis/productsApi';
 import { useProductForm } from './hooks/useProductForm';
 import { StepIndicator } from './components/StepIndicator';

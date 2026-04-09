@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { Upload, X } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
-import { ImageItem } from '../utils/types';
+import type { ImageItem } from '../utils/types';
 
 interface ImageUploaderProps {
   images: ImageItem[];

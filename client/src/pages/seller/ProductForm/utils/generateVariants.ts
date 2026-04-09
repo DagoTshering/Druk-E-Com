@@ -1,4 +1,4 @@
-import { Variant, VariantAttribute } from './types';
+import type { Variant, VariantAttribute } from './types';
 
 function cartesianProduct(arrays: string[][]): string[][] {
   if (arrays.length === 0) return [[]];
@@ -65,15 +65,4 @@ export function generateVariants(
   });
 
   return newVariants;
-}
-
-export function getVariantKey(attributes: Record<string, string>): string {
-  return Object.entries(attributes)
-    .map(([key, value]) => `${key.toLowerCase()}:${value}`)
-    .sort((a, b) => a.localeCompare(b))
-    .join('|');
-}
-
-export function getImageMapKey(attributeName: string, attributeValue: string): string {
-  return `${attributeName.toLowerCase()}:${attributeValue}`;
 }

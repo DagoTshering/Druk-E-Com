@@ -53,3 +53,7 @@ export const STEPS = [
   { number: 2, label: 'Images' },
   { number: 3, label: 'Review' },
 ] as const;
+
+export function getImageMapKey(attributeName: string, attributeValue: string): string {
+  return `${attributeName.toLowerCase()}:${attributeValue}`;
+}

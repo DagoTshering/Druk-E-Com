@@ -1,13 +1,13 @@
 import { useState, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
-import {
+import type {
   ProductFormState,
   Variant,
   VariantAttribute,
   ImageItem,
-  VISUAL_ATTRIBUTES,
 } from '../utils/types';
-import { generateVariants, getImageMapKey } from '../utils/generateVariants';
+import { VISUAL_ATTRIBUTES, getImageMapKey } from '../utils/types';
+import { generateVariants } from '../utils/generateVariants';
 import { generateSku, regenerateSku } from '../utils/generateSku';
 import { productsApi } from '@/apis/productsApi';
 
@@ -304,7 +304,7 @@ export function useProductForm() {
 
     try {
       const response = await productsApi.uploadImages(files);
-      const { imageUrls } = response;
+      const { imageUrls } = response.data;
 
       setState(prev => {
         const updatedImages = [...prev.productImages];
@@ -355,7 +355,7 @@ export function useProductForm() {
 
     try {
       const response = await productsApi.uploadImages(files);
-      const { imageUrls } = response;
+      const { imageUrls } = response.data;
 
       setState(prev => {
         const currentImages = prev.variantImageMap[key] || [];
@@ -468,13 +468,14 @@ export function useProductForm() {
       brand: state.brand || undefined,
       tags: state.tags,
       images: productImages,
+      isFeatured: false,
       variants,
     };
   }, [state]);
 
-  const submit = useCallback(async () => {
+  const submit = useCallback(async (): Promise<boolean> => {
     if (!validateStep(0) || !validateStep(1) || !validateStep(2)) {
-      return;
+      return false;
     }
 
     updateState({ isSubmitting: true });

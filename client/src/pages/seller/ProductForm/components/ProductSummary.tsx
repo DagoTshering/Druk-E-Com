@@ -1,5 +1,4 @@
-import React from 'react';
-import { ProductFormState } from '../utils/types';
+import type { ProductFormState } from '../utils/types';
 import { getImageMapKey, VISUAL_ATTRIBUTES } from '../utils/types';
 
 interface ProductSummaryProps {
