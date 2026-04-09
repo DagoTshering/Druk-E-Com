@@ -155,8 +155,8 @@ export function useProductForm() {
     if (!validateStep(state.currentStep)) return;
     markStepCompleted(state.currentStep);
 
-    // Auto-generate SKU for single product when moving to Step 2 (Variants)
-    if (state.currentStep === 0 && !state.hasVariants && !state.variants[0]?.sku) {
+    // Always regenerate SKU for single product when moving to Step 2 (Variants)
+    if (state.currentStep === 0 && !state.hasVariants) {
       const sku = regenerateSku(state.name || 'product', {});
       updateState({
         variants: [{ ...state.variants[0], sku }],
