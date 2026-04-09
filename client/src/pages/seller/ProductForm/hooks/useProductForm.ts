@@ -171,13 +171,24 @@ export function useProductForm() {
   const setCategoryId = useCallback((categoryId: string) => updateState({ categoryId }), [updateState]);
   const setBrand = useCallback((brand: string) => updateState({ brand }), [updateState]);
   const setHasVariants = useCallback((hasVariants: boolean) => {
-    updateState({
-      hasVariants,
-      variantAttributes: hasVariants ? [] : [],
-      variants: hasVariants ? [] : [initialVariant()],
-      variantImageMap: {},
-    });
-  }, [updateState]);
+    if (!hasVariants) {
+      const singleVariant = initialVariant();
+      singleVariant.sku = regenerateSku(state.name || 'product', {});
+      updateState({
+        hasVariants: false,
+        variantAttributes: [],
+        variants: [singleVariant],
+        variantImageMap: {},
+      });
+    } else {
+      updateState({
+        hasVariants: true,
+        variantAttributes: [],
+        variants: [],
+        variantImageMap: {},
+      });
+    }
+  }, [updateState, state.name]);
 
   const addTag = useCallback((tag: string) => {
     setState(prev => {
