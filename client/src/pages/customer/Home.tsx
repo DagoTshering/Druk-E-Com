@@ -309,11 +309,9 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart, delay }) => {
-  const price = typeof product.price === 'string' ? parseFloat(product.price) : product.price;
-  const originalPrice = product.originalPrice
-    ? (typeof product.originalPrice === 'string' ? parseFloat(product.originalPrice) : product.originalPrice)
-    : null;
-  const rating = typeof product.rating === 'string' ? parseFloat(product.rating) : product.rating;
+  const defaultVariant = product.variants?.find(v => v.isDefault) || product.variants?.[0];
+  const price = defaultVariant?.price ? parseFloat(defaultVariant.price) : 0;
+  const originalPrice = defaultVariant?.originalPrice ? parseFloat(defaultVariant.originalPrice) : null;
 
   return (
     <div
@@ -344,11 +342,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart, delay }
         </Link>
         
         <div className="flex items-center gap-2 mb-3">
-          <div className="flex items-center gap-1">
-            <Star className="w-3.5 h-3.5 text-gold fill-gold" />
-            <span className="text-sm text-warm-white font-body">{rating.toFixed(1)}</span>
-          </div>
-          <span className="text-warm-gray text-sm font-body">({product.reviewCount})</span>
+          <span className="text-xs text-warm-gray font-body px-2 py-0.5 bg-dark-elevated rounded">
+            NEW
+          </span>
         </div>
         
         <div className="flex items-center justify-between">

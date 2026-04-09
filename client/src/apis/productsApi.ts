@@ -11,20 +11,30 @@ export interface Product {
   id: string;
   name: string;
   description: string;
-  price: string;
-  originalPrice: string | null;
+  slug?: string;
+  brand?: string;
   category: string;
   categoryId: string;
   sellerId: string;
   images: string[];
-  stock: number;
-  rating: string;
-  reviewCount: number;
   tags: string[];
   isActive: boolean;
   isFeatured: boolean;
   createdAt: string;
   updatedAt: string;
+  variants: Variant[];
+}
+
+export interface Variant {
+  id: string;
+  productId: string;
+  attributes: Record<string, string>;
+  sku: string;
+  price: string;
+  originalPrice: string | null;
+  stock: number;
+  isDefault: boolean;
+  isActive: boolean;
 }
 
 export interface ProductsResponse {

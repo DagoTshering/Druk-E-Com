@@ -328,7 +328,7 @@ export function useProductForm() {
 
     try {
       const response = await productsApi.uploadImages(files);
-      const { imageUrls } = response;
+      const { imageUrls } = response.data;
 
       setState(prev => {
         const updatedImages = [...prev.productImages];
@@ -379,7 +379,7 @@ export function useProductForm() {
 
     try {
       const response = await productsApi.uploadImages(files);
-      const { imageUrls } = response;
+      const { imageUrls } = response.data;
 
       setState(prev => {
         const currentImages = prev.variantImageMap[key] || [];
