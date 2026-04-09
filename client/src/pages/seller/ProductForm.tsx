@@ -4,10 +4,41 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Upload, X, Plus } from 'lucide-react';
+import { ArrowLeft, Upload, X, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { productsApi, type Category } from '../../apis/productsApi';
 import { Spinner } from '@/components/ui/spinner';
+
+interface Variant {
+  id?: string;
+  attributes: Record<string, string>;
+  price: string;
+  originalPrice: string;
+  stock: string;
+  sku: string;
+  isDefault: boolean;
+  isActive: boolean;
+  lowStockThreshold: string;
+  isExpanded: boolean;
+}
+
+interface ImageItem {
+  url: string;
+  publicId: string;
+  isUploading: boolean;
+}
+
+const initialVariant = (): Variant => ({
+  attributes: {},
+  price: '',
+  originalPrice: '',
+  stock: '',
+  sku: '',
+  isDefault: true,
+  isActive: true,
+  lowStockThreshold: '5',
+  isExpanded: true,
+});
 
 export const ProductForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,13 +50,12 @@ export const ProductForm: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    price: '',
-    originalPrice: '',
     category: '',
-    stock: '',
+    brand: '',
     tags: [] as string[],
-    images: [] as Array<{ url: string; publicId: string; isUploading: boolean }>
+    images: [] as ImageItem[]
   });
+  const [variants, setVariants] = useState<Variant[]>([initialVariant()]);
   const [newTag, setNewTag] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -143,6 +173,64 @@ export const ProductForm: React.FC = () => {
     }));
   };
 
+  const addVariant = () => {
+    setVariants(prev => [...prev, { ...initialVariant(), isDefault: false, isExpanded: true }]);
+  };
+
+  const removeVariant = (index: number) => {
+    if (variants.length === 1) {
+      toast.error('At least one variant is required');
+      return;
+    }
+    setVariants(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateVariant = (index: number, field: keyof Variant, value: unknown) => {
+    setVariants(prev => {
+      const updated = [...prev];
+      if (field === 'isDefault' && value === true) {
+        updated.forEach((v, i) => {
+          v.isDefault = i === index;
+          v.isExpanded = i === index;
+        });
+      } else {
+        (updated[index] as Record<string, unknown>)[field] = value;
+      }
+      return updated;
+    });
+  };
+
+  const updateVariantAttribute = (index: number, key: string, value: string) => {
+    setVariants(prev => {
+      const updated = [...prev];
+      updated[index] = {
+        ...updated[index],
+        attributes: { ...updated[index].attributes, [key]: value }
+      };
+      return updated;
+    });
+  };
+
+  const removeVariantAttribute = (index: number, key: string) => {
+    setVariants(prev => {
+      const updated = [...prev];
+      const newAttributes = { ...updated[index].attributes };
+      delete newAttributes[key];
+      updated[index] = { ...updated[index], attributes: newAttributes };
+      return updated;
+    });
+  };
+
+  const addVariantAttribute = (index: number) => {
+    const key = prompt('Enter attribute name (e.g., size, color):');
+    if (!key) return;
+    if (variants[index].attributes[key] !== undefined) {
+      toast.error(`Attribute "${key}" already exists`);
+      return;
+    }
+    updateVariantAttribute(index, key, '');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -156,19 +244,33 @@ export const ProductForm: React.FC = () => {
       return;
     }
 
+    const invalidVariants = variants.some(v => !v.price || !v.stock);
+    if (invalidVariants) {
+      toast.error('All variants must have price and stock');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const productData = {
         name: formData.name,
         description: formData.description,
-        price: formData.price,
-        originalPrice: formData.originalPrice || undefined,
         categoryId: formData.category,
+        brand: formData.brand || undefined,
         images: formData.images.filter(img => !img.isUploading).map(img => img.url),
-        stock: parseInt(formData.stock, 10),
         tags: formData.tags,
         isFeatured: false,
+        variants: variants.map(v => ({
+          attributes: v.attributes,
+          sku: v.sku || undefined,
+          price: v.price,
+          originalPrice: v.originalPrice || undefined,
+          stock: parseInt(v.stock, 10),
+          isDefault: v.isDefault,
+          isActive: v.isActive,
+          lowStockThreshold: parseInt(v.lowStockThreshold, 10) || 5,
+        })),
       };
 
       await productsApi.createProduct(productData);
@@ -312,14 +414,12 @@ export const ProductForm: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-warm-gray text-sm font-body mb-2">Stock Quantity *</label>
+                  <label className="block text-warm-gray text-sm font-body mb-2">Brand (Optional)</label>
                   <input
-                    type="number"
-                    required
-                    min="0"
-                    value={formData.stock}
-                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                    placeholder="0"
+                    type="text"
+                    value={formData.brand}
+                    onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                    placeholder="Enter brand name"
                     className="w-full px-4 py-3 bg-dark-base border border-white/10 rounded-lg text-warm-white placeholder:text-warm-gray/50 focus:border-gold focus:ring-1 focus:ring-gold transition-all font-body"
                   />
                 </div>
@@ -327,45 +427,194 @@ export const ProductForm: React.FC = () => {
             </div>
           </div>
 
-          {/* Pricing */}
+          {/* Variants Section */}
           <div className="bg-dark-surface rounded-xl border border-white/5 p-6">
-            <h2 className="text-xl font-display text-warm-white mb-6">Pricing</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-warm-gray text-sm font-body mb-2">Price *</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-warm-gray">$</span>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    step="0.01"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    placeholder="0.00"
-                    className="w-full pl-10 pr-4 py-3 bg-dark-base border border-white/10 rounded-lg text-warm-white placeholder:text-warm-gray/50 focus:border-gold focus:ring-1 focus:ring-gold transition-all font-body"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-warm-gray text-sm font-body mb-2">Original Price (Optional)</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-warm-gray">$</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.originalPrice}
-                    onChange={(e) => setFormData({ ...formData, originalPrice: e.target.value })}
-                    placeholder="0.00"
-                    className="w-full pl-10 pr-4 py-3 bg-dark-base border border-white/10 rounded-lg text-warm-white placeholder:text-warm-gray/50 focus:border-gold focus:ring-1 focus:ring-gold transition-all font-body"
-                  />
-                </div>
-                <p className="text-warm-gray text-xs font-body mt-2">Leave empty if not on sale</p>
-              </div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-display text-warm-white">Variants</h2>
+              <button
+                type="button"
+                onClick={addVariant}
+                className="flex items-center gap-2 px-4 py-2 bg-gold text-dark-base rounded-lg font-body font-medium hover:bg-gold-light transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Add Variant
+              </button>
             </div>
+
+            <div className="space-y-4">
+              {variants.map((variant, idx) => (
+                <div key={idx} className="border border-white/10 rounded-lg overflow-hidden">
+                  <div
+                    className="flex items-center justify-between p-4 bg-dark-elevated cursor-pointer"
+                    onClick={() => updateVariant(idx, 'isExpanded', !variant.isExpanded)}
+                  >
+                    <div className="flex items-center gap-4">
+                      <input
+                        type="radio"
+                        name="defaultVariant"
+                        checked={variant.isDefault}
+                        onChange={() => updateVariant(idx, 'isDefault', true)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-4 h-4 accent-gold"
+                      />
+                      <span className="text-warm-white font-body">
+                        {variant.isDefault ? 'Default' : `Variant ${idx + 1}`}
+                      </span>
+                      {Object.keys(variant.attributes).length > 0 && (
+                        <span className="text-warm-gray text-sm font-body">
+                          ({Object.entries(variant.attributes).map(([k, v]) => `${k}: ${v}`).join(', ')})
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeVariant(idx);
+                        }}
+                        className="p-2 text-warm-gray hover:text-red-400 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                      {variant.isExpanded ? (
+                        <ChevronUp className="w-4 h-4 text-warm-gray" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-warm-gray" />
+                      )}
+                    </div>
+                  </div>
+
+                  {variant.isExpanded && (
+                    <div className="p-4 space-y-4">
+                      {/* Attributes */}
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-warm-gray text-sm font-body">Attributes</label>
+                          <button
+                            type="button"
+                            onClick={() => addVariantAttribute(idx)}
+                            className="text-gold text-sm font-body hover:text-gold-light"
+                          >
+                            + Add Attribute
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(variant.attributes).map(([key, value]) => (
+                            <div key={key} className="flex items-center gap-1 bg-dark-base rounded-lg px-3 py-1">
+                              <span className="text-warm-gray text-sm font-body">{key}:</span>
+                              <input
+                                type="text"
+                                value={value}
+                                onChange={(e) => updateVariantAttribute(idx, key, e.target.value)}
+                                className="bg-transparent text-warm-white text-sm font-body w-20 focus:outline-none"
+                                placeholder={key}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeVariantAttribute(idx, key)}
+                                className="text-warm-gray hover:text-red-400"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Price & Stock */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                          <label className="block text-warm-gray text-sm font-body mb-2">Price *</label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-warm-gray text-sm">$</span>
+                            <input
+                              type="number"
+                              required
+                              min="0"
+                              step="0.01"
+                              value={variant.price}
+                              onChange={(e) => updateVariant(idx, 'price', e.target.value)}
+                              placeholder="0.00"
+                              className="w-full pl-8 pr-3 py-2 bg-dark-base border border-white/10 rounded-lg text-warm-white placeholder:text-warm-gray/50 focus:border-gold focus:ring-1 focus:ring-gold transition-all font-body"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-warm-gray text-sm font-body mb-2">Original Price</label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-warm-gray text-sm">$</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={variant.originalPrice}
+                              onChange={(e) => updateVariant(idx, 'originalPrice', e.target.value)}
+                              placeholder="0.00"
+                              className="w-full pl-8 pr-3 py-2 bg-dark-base border border-white/10 rounded-lg text-warm-white placeholder:text-warm-gray/50 focus:border-gold focus:ring-1 focus:ring-gold transition-all font-body"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-warm-gray text-sm font-body mb-2">Stock *</label>
+                          <input
+                            type="number"
+                            required
+                            min="0"
+                            value={variant.stock}
+                            onChange={(e) => updateVariant(idx, 'stock', e.target.value)}
+                            placeholder="0"
+                            className="w-full px-3 py-2 bg-dark-base border border-white/10 rounded-lg text-warm-white placeholder:text-warm-gray/50 focus:border-gold focus:ring-1 focus:ring-gold transition-all font-body"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-warm-gray text-sm font-body mb-2">SKU</label>
+                          <input
+                            type="text"
+                            value={variant.sku}
+                            onChange={(e) => updateVariant(idx, 'sku', e.target.value)}
+                            placeholder="SKU-001"
+                            className="w-full px-3 py-2 bg-dark-base border border-white/10 rounded-lg text-warm-white placeholder:text-warm-gray/50 focus:border-gold focus:ring-1 focus:ring-gold transition-all font-body"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-warm-gray text-sm font-body mb-2">Low Stock Alert</label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={variant.lowStockThreshold}
+                            onChange={(e) => updateVariant(idx, 'lowStockThreshold', e.target.value)}
+                            placeholder="5"
+                            className="w-full px-3 py-2 bg-dark-base border border-white/10 rounded-lg text-warm-white placeholder:text-warm-gray/50 focus:border-gold focus:ring-1 focus:ring-gold transition-all font-body"
+                          />
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={variant.isActive}
+                              onChange={(e) => updateVariant(idx, 'isActive', e.target.checked)}
+                              className="w-4 h-4 accent-gold"
+                            />
+                            <span className="text-warm-white text-sm font-body">Active</span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <p className="text-warm-gray text-sm font-body mt-4">
+              At least one variant is required. Set one as default. Add attributes like size, color, etc.
+            </p>
           </div>
 
           {/* Tags */}

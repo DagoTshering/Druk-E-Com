@@ -1,8 +1,15 @@
-import { eq, and, like, or, sql, inArray, desc } from "drizzle-orm";
+import { eq, and, like, or, sql, desc } from "drizzle-orm";
 import { db } from "../../../shared/database/connection";
-import { NotFoundException, ForbiddenException, BadRequestException } from "../../../shared/errors/error.core";
-import { products, categories } from "../models";
+import { NotFoundException, ForbiddenException } from "../../../shared/errors/error.core";
+import { products, categories, productVariants } from "../models";
 import type { CreateProductPayload, UpdateProductPayload, GetProductsPayload } from "../schemas/product.schema";
+
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 
 class ProductService {
   private async getCategoryName(categoryId: string): Promise<string> {
@@ -85,15 +92,12 @@ class ProductService {
       .select({
         id: products.id,
         name: products.name,
+        slug: products.slug,
         description: products.description,
-        price: products.price,
-        originalPrice: products.originalPrice,
         categoryId: products.categoryId,
         sellerId: products.sellerId,
         images: products.images,
-        stock: products.stock,
-        rating: products.rating,
-        reviewCount: products.reviewCount,
+        brand: products.brand,
         tags: products.tags,
         isActive: products.isActive,
         isFeatured: products.isFeatured,
@@ -104,12 +108,31 @@ class ProductService {
       .from(products)
       .leftJoin(categories, eq(products.categoryId, categories.id))
       .where(and(...conditions))
-      .orderBy(desc(products.createdAt)) // without it you may see duplicate and missing items
+      .orderBy(desc(products.createdAt))
       .limit(limit)
       .offset(offset);
 
+    const productIds = productList.map(p => p.id);
+
+    const variantList = await db
+      .select()
+      .from(productVariants)
+      .where(sql`${productVariants.productId} IN (${sql.join(productIds.map(id => sql`${id}`), sql`, `)})`);
+
+    const variantMap = new Map<string, typeof variantList>();
+    for (const variant of variantList) {
+      const existing = variantMap.get(variant.productId) || [];
+      existing.push(variant);
+      variantMap.set(variant.productId, existing);
+    }
+
+    const productsWithVariants = productList.map(product => ({
+      ...product,
+      variants: variantMap.get(product.id) || [],
+    }));
+
     return {
-      products: productList,
+      products: productsWithVariants,
       total: countResult?.count || 0,
       page,
       limit,
@@ -122,15 +145,12 @@ class ProductService {
       .select({
         id: products.id,
         name: products.name,
+        slug: products.slug,
         description: products.description,
-        price: products.price,
-        originalPrice: products.originalPrice,
         categoryId: products.categoryId,
         sellerId: products.sellerId,
         images: products.images,
-        stock: products.stock,
-        rating: products.rating,
-        reviewCount: products.reviewCount,
+        brand: products.brand,
         tags: products.tags,
         isActive: products.isActive,
         isFeatured: products.isFeatured,
@@ -150,26 +170,48 @@ class ProductService {
       throw new NotFoundException("Product not found");
     }
 
-    return product;
+    const variants = await db
+      .select()
+      .from(productVariants)
+      .where(eq(productVariants.productId, id));
+
+    return { ...product, variants };
   }
 
   public async createProduct(data: CreateProductPayload, sellerId: string) {
+    const slug = generateSlug(data.name);
+
     const [product] = await db
       .insert(products)
       .values({
         name: data.name,
+        slug,
         description: data.description,
-        price: data.price,
-        originalPrice: data.originalPrice,
         categoryId: data.categoryId,
         sellerId,
         images: data.images,
-        stock: data.stock,
+        brand: data.brand,
         tags: data.tags,
         isFeatured: data.isFeatured,
         isActive: true,
       })
       .returning();
+
+    const variantInserts = data.variants.map((variant, index) => ({
+      productId: product.id,
+      attributes: variant.attributes,
+      sku: variant.sku,
+      price: variant.price,
+      originalPrice: variant.originalPrice,
+      stock: variant.stock,
+      weight: variant.weight,
+      images: variant.images,
+      isDefault: variant.isDefault || index === 0,
+      isActive: variant.isActive,
+      lowStockThreshold: variant.lowStockThreshold,
+    }));
+
+    await db.insert(productVariants).values(variantInserts);
 
     return this.getProductById(product.id);
   }
@@ -189,13 +231,43 @@ class ProductService {
       throw new ForbiddenException("You can only update your own products");
     }
 
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
+    if (data.name !== undefined) {
+      updateData.name = data.name;
+      updateData.slug = generateSlug(data.name);
+    }
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
+    if (data.images !== undefined) updateData.images = data.images;
+    if (data.brand !== undefined) updateData.brand = data.brand;
+    if (data.tags !== undefined) updateData.tags = data.tags;
+    if (data.isFeatured !== undefined) updateData.isFeatured = data.isFeatured;
+    if (data.isActive !== undefined) updateData.isActive = data.isActive;
+
     await db
       .update(products)
-      .set({
-        ...data,
-        updatedAt: new Date(),
-      })
+      .set(updateData)
       .where(eq(products.id, id));
+
+    if (data.variants !== undefined) {
+      await db.delete(productVariants).where(eq(productVariants.productId, id));
+
+      const variantInserts = data.variants.map((variant, index) => ({
+        productId: id,
+        attributes: variant.attributes,
+        sku: variant.sku,
+        price: variant.price,
+        originalPrice: variant.originalPrice,
+        stock: variant.stock,
+        weight: variant.weight,
+        images: variant.images,
+        isDefault: variant.isDefault || index === 0,
+        isActive: variant.isActive,
+        lowStockThreshold: variant.lowStockThreshold,
+      }));
+
+      await db.insert(productVariants).values(variantInserts);
+    }
 
     return this.getProductById(id);
   }
